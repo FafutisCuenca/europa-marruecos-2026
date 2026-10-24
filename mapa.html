@@ -1,0 +1,359 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <meta
+    name="description"
+    content="Mapa interactivo del viaje Europa y Marruecos 2026."
+  >
+
+  <meta name="theme-color" content="#173c35">
+
+  <title>Mapa del viaje | Europa + Marruecos 2026</title>
+
+  <!-- Leaflet: estilos del mapa -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  >
+
+  <style>
+    :root {
+      --green: #173c35;
+      --green-light: #28594d;
+      --cream: #f7f4ec;
+      --paper: #fffdf8;
+      --gold: #bd9656;
+      --text: #25332e;
+      --muted: #68766f;
+      --border: #e3e1d7;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--cream);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.5;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .hero {
+      padding: 28px 20px;
+      color: white;
+      background: var(--green);
+      border-bottom: 4px solid var(--gold);
+    }
+
+    .hero-inner {
+      width: min(1100px, 100%);
+      margin: auto;
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: #e6d3ac;
+      font-size: 0.78rem;
+      font-weight: bold;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(1.8rem, 5vw, 2.8rem);
+      font-weight: normal;
+    }
+
+    .subtitle {
+      margin: 10px 0 0;
+      color: #e8eee9;
+    }
+
+    .nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 22px;
+    }
+
+    .nav a {
+      display: inline-block;
+      padding: 9px 13px;
+      border: 1px solid #789087;
+      border-radius: 7px;
+      text-decoration: none;
+      font-size: 0.92rem;
+    }
+
+    .nav a:hover,
+    .nav a:focus-visible {
+      background: var(--green-light);
+    }
+
+    main {
+      width: min(1100px, calc(100% - 28px));
+      margin: 24px auto 42px;
+    }
+
+    .intro {
+      margin-bottom: 20px;
+    }
+
+    .intro h2 {
+      margin: 0 0 6px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 1.55rem;
+    }
+
+    .intro p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 14px;
+      padding: 18px;
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 14px;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 0.9rem;
+      font-weight: bold;
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      min-height: 44px;
+      padding: 10px 12px;
+      color: var(--text);
+      background: white;
+      border: 1px solid #c9d0ca;
+      border-radius: 7px;
+      font-size: 1rem;
+    }
+
+    .status {
+      margin: 12px 0;
+      padding: 12px 14px;
+      background: #e9eee7;
+      border-left: 4px solid var(--green-light);
+      border-radius: 4px;
+      font-size: 0.93rem;
+    }
+
+    .map-card {
+      overflow: hidden;
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    #tripMap {
+      width: 100%;
+      height: min(62vh, 570px);
+      min-height: 350px;
+      background: #e8e8df;
+    }
+
+    .map-note {
+      padding: 10px 14px;
+      color: var(--muted);
+      font-size: 0.83rem;
+    }
+
+    .list-heading {
+      margin: 28px 0 12px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 1.45rem;
+    }
+
+    #mapLocationList {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .map-location-item {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 5px;
+      width: 100%;
+      min-height: 80px;
+      padding: 14px;
+      text-align: left;
+      color: var(--text);
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      cursor: pointer;
+      overflow-wrap: anywhere;
+    }
+
+    .map-location-item:not(:disabled):hover {
+      border-color: var(--gold);
+      box-shadow: 0 2px 8px #173c3512;
+    }
+
+    .map-location-item:disabled {
+      cursor: default;
+      opacity: 0.75;
+    }
+
+    .map-location-item span {
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .map-pending {
+      color: #865f21 !important;
+      font-weight: bold;
+    }
+
+    .footer {
+      padding: 24px 16px;
+      text-align: center;
+      color: #e8eee9;
+      background: var(--green);
+      font-size: 0.88rem;
+    }
+
+    .footer p {
+      margin: 4px;
+    }
+
+    @media (max-width: 650px) {
+      .hero {
+        padding: 23px 16px;
+      }
+
+      main {
+        width: calc(100% - 20px);
+        margin-top: 16px;
+      }
+
+      .filters {
+        grid-template-columns: 1fr;
+        padding: 14px;
+      }
+
+      #mapLocationList {
+        grid-template-columns: 1fr;
+      }
+
+      #tripMap {
+        height: 52vh;
+        min-height: 320px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <p class="eyebrow">Diario de viaje · 2026</p>
+      <h1>Europa + Marruecos</h1>
+      <p class="subtitle">29 de octubre al 14 de noviembre de 2026</p>
+
+      <nav class="nav" aria-label="Navegación principal">
+        <a href="./index.html">← Inicio del viaje</a>
+        <a href="./index.html">Itinerario</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="intro">
+      <h2>Explora nuestros destinos</h2>
+      <p>
+        Consulta los lugares del viaje, filtra por ciudad y selecciona
+        una ubicación para centrar el mapa.
+      </p>
+    </section>
+
+    <section class="filters" aria-label="Filtros del mapa">
+      <div class="field">
+        <label for="mapCityFilter">Filtrar por ciudad</label>
+        <select id="mapCityFilter">
+          <option value="all">Todas las ciudades</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="mapSearch">Buscar un lugar</label>
+        <input
+          id="mapSearch"
+          type="search"
+          placeholder="Ej. Sagrada Familia"
+          autocomplete="off"
+        >
+      </div>
+    </section>
+
+    <p
+      id="mapStatus"
+      class="status"
+      role="status"
+      aria-live="polite"
+    >
+      Preparando el mapa…
+    </p>
+
+    <section class="map-card" aria-label="Mapa interactivo del viaje">
+      <div id="tripMap" aria-label="Mapa de ubicaciones del viaje"></div>
+      <div class="map-note">
+        Los marcadores muestran ubicaciones con coordenadas disponibles.
+        Los lugares pendientes de confirmar aparecen en la lista.
+        El mapa base requiere conexión a internet.
+      </div>
+    </section>
+
+    <h2 class="list-heading">Lugares del itinerario</h2>
+    <section
+      id="mapLocationList"
+      aria-label="Lista de ubicaciones"
+      aria-live="polite"
+    >
+      <p>La lista se mostrará cuando se carguen los datos.</p>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>Europa + Marruecos 2026</p>
+    <p>Información de viaje para consultar desde el móvil.</p>
+  </footer>
+
+  <!-- Leaflet: motor del mapa -->
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+
+  <!-- Módulo propio del proyecto -->
+  <script src="./js/map.js"></script>
+</body>
+</html>
