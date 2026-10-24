@@ -1,0 +1,984 @@
+
+{
+  "trip": {
+    "id": "europa-marruecos-2026",
+    "title": "Europa + Marruecos 2026",
+    "startDate": "2026-10-29",
+    "endDate": "2026-11-14",
+    "days": 17,
+    "source": "Itinerario_Europa_Marruecos_2026.pdf",
+    "currency": "EUR",
+    "cities": [
+      "Madrid",
+      "Barcelona",
+      "Marrakech",
+      "Sahara"
+    ]
+  },
+  "statusCatalog": {
+    "reservation": [
+      "comprado",
+      "reservado",
+      "pendiente",
+      "no_indicado"
+    ],
+    "execution": [
+      "pendiente",
+      "en_curso",
+      "realizado",
+      "reprogramado",
+      "cancelado"
+    ]
+  },
+  "days": [
+    {
+      "date": "2026-10-29",
+      "weekday": "jueves",
+      "city": "Madrid",
+      "phase": "Madrid I",
+      "title": "Llegada y jet lag",
+      "accommodation": {
+        "address": "Plaza de Ramales, Madrid, España",
+        "reservationStatus": "no_indicado"
+      },
+      "activities": [
+        {
+          "id": "20261029-01",
+          "time": null,
+          "timeLabel": "Llegada",
+          "name": "Llegada a Madrid",
+          "description": "Llegada, traslado y check-in.",
+          "locationId": "aeropuerto-madrid",
+          "reservationStatus": "no_indicado",
+          "executionStatus": "pendiente"
+        },
+        {
+          "id": "20261029-02",
+          "time": null,
+          "timeLabel": "Tarde / noche",
+          "name": "Descanso",
+          "description": "Descanso total. Cena cerca o paseo muy corto solo si hay energía.",
+          "locationId": null,
+          "reservationStatus": "no_indicado",
+          "executionStatus": "pendiente"
+        }
+      ]
+    },
+    {
+      "date": "2026-10-30",
+      "weekday": "viernes",
+      "city": "Madrid",
+      "phase": "Madrid I",
+      "title": "Madrid histórico",
+      "activities": [
+        {
+          "id": "20261030-01",
+          "time": "09:00",
+          "name": "Desayuno",
+          "locationId": null
+        },
+        {
+          "id": "20261030-02",
+          "time": "10:30",
+          "endTime": "12:00",
+          "name": "Palacio Real",
+          "locationId": "palacio-real-madrid",
+          "reservationStatus": "comprado"
+        },
+        {
+          "id": "20261030-03",
+          "time": "12:00",
+          "endTime": "12:45",
+          "name": "Campo del Moro",
+          "locationId": "campo-del-moro"
+        },
+        {
+          "id": "20261030-04",
+          "time": "13:00",
+          "endTime": "13:30",
+          "name": "Catedral de la Almudena",
+          "locationId": "catedral-almudena"
+        },
+        {
+          "id": "20261030-05",
+          "time": "13:30",
+          "endTime": "14:00",
+          "name": "Plaza de la Villa y Calle Mayor",
+          "locationId": "plaza-de-la-villa"
+        },
+        {
+          "id": "20261030-06",
+          "time": "14:00",
+          "endTime": "14:30",
+          "name": "Plaza Mayor",
+          "locationId": "plaza-mayor-madrid"
+        },
+        {
+          "id": "20261030-07",
+          "time": "14:30",
+          "name": "Mercado de San Miguel",
+          "description": "Vistazo y paseo.",
+          "locationId": "mercado-san-miguel"
+        },
+        {
+          "id": "20261030-08",
+          "time": "15:00",
+          "endTime": "16:30",
+          "name": "Comida",
+          "locationId": null
+        },
+        {
+          "id": "20261030-09",
+          "time": "16:30",
+          "name": "Puerta del Sol",
+          "locationId": "puerta-del-sol"
+        },
+        {
+          "id": "20261030-10",
+          "time": "17:00",
+          "endTime": "20:00",
+          "name": "Gran Vía y Callao",
+          "description": "Arquitectura y shopping.",
+          "locationId": "gran-via-callao"
+        },
+        {
+          "id": "20261030-11",
+          "time": "20:00",
+          "name": "Rooftop del Círculo de Bellas Artes",
+          "locationId": "circulo-bellas-artes"
+        },
+        {
+          "id": "20261030-12",
+          "time": "21:30",
+          "name": "Cena y regreso",
+          "locationId": null
+        }
+      ]
+    },
+    {
+      "date": "2026-10-31",
+      "weekday": "sábado",
+      "city": "Madrid",
+      "phase": "Madrid I",
+      "title": "Fashion Madrid",
+      "activities": [
+        {
+          "id": "20261031-01",
+          "time": "10:00",
+          "name": "Desayuno",
+          "locationId": null
+        },
+        {
+          "id": "20261031-02",
+          "time": "11:00",
+          "endTime": "13:30",
+          "name": "Barrio de Salamanca",
+          "description": "Serrano y Ortega y Gasset.",
+          "locationId": "barrio-salamanca"
+        },
+        {
+          "id": "20261031-03",
+          "time": "13:30",
+          "endTime": "15:00",
+          "name": "Comida",
+          "locationId": null
+        },
+        {
+          "id": "20261031-04",
+          "time": "15:00",
+          "endTime": "16:30",
+          "name": "Salesas",
+          "description": "Boutiques, diseño y cafés.",
+          "locationId": "salesas-madrid"
+        },
+        {
+          "id": "20261031-05",
+          "time": "16:30",
+          "endTime": "18:00",
+          "name": "Chueca",
+          "locationId": "chueca"
+        },
+        {
+          "id": "20261031-06",
+          "time": "18:00",
+          "endTime": "19:00",
+          "name": "Malasaña",
+          "description": "Vintage y tiendas alternativas.",
+          "locationId": "malasana"
+        },
+        {
+          "id": "20261031-07",
+          "time": "19:00",
+          "name": "Airbnb y arreglarse",
+          "locationId": null
+        },
+        {
+          "id": "20261031-08",
+          "time": "21:00",
+          "name": "Cena",
+          "locationId": null
+        },
+        {
+          "id": "20261031-09",
+          "time": null,
+          "timeLabel": "Noche",
+          "name": "Toni 2 Piano Bar",
+          "locationId": "toni-2-piano-bar"
+        }
+      ]
+    },
+    {
+      "date": "2026-11-01",
+      "weekday": "domingo",
+      "city": "Madrid",
+      "phase": "Madrid I",
+      "title": "El Rastro y sunset",
+      "notes": [
+        "Museo del Traje eliminado del itinerario."
+      ],
+      "activities": [
+        {
+          "id": "20261101-01",
+          "time": "10:00",
+          "endTime": "12:30",
+          "name": "El Rastro",
+          "locationId": "el-rastro"
+        },
+        {
+          "id": "20261101-02",
+          "time": "12:30",
+          "endTime": "15:00",
+          "name": "La Latina, tapas y comida",
+          "locationId": "la-latina"
+        },
+        {
+          "id": "20261101-03",
+          "time": "15:00",
+          "endTime": "16:30",
+          "name": "Tiempo libre",
+          "description": "Café o paseo.",
+          "locationId": null
+        },
+        {
+          "id": "20261101-04",
+          "time": "17:00",
+          "timeLabel": "Aproximadamente",
+          "name": "Atardecer en el Templo de Debod",
+          "locationId": "templo-de-debod"
+        },
+        {
+          "id": "20261101-05",
+          "time": "19:00",
+          "name": "Airbnb y arreglarse",
+          "locationId": null
+        },
+        {
+          "id": "20261101-06",
+          "time": "21:00",
+          "name": "Cena",
+          "locationId": null
+        },
+        {
+          "id": "20261101-07",
+          "time": null,
+          "timeLabel": "Noche",
+          "name": "Sala de Despecho",
+          "locationId": "sala-de-despecho"
+        }
+      ]
+    },
+    {
+      "date": "2026-11-02",
+      "weekday": "lunes",
+      "city": "Madrid",
+      "phase": "Madrid I",
+      "title": "Toledo, Segovia y Ávila",
+      "activities": [
+        {
+          "id": "20261102-01",
+          "time": null,
+          "timeLabel": "Todo el día",
+          "name": "Tour Toledo, Segovia y Ávila",
+          "description": "Tour reservado.",
+          "locationId": "tour-toledo-segovia-avila",
+          "reservationStatus": "reservado"
+        },
+        {
+          "id": "20261102-02",
+          "time": null,
+          "timeLabel": "Noche",
+          "name": "Regreso a Madrid, cena y descanso",
+          "locationId": null
+        }
+      ]
+    },
+    {
+      "date": "2026-11-03",
+      "weekday": "martes",
+      "city": "Madrid / Barcelona",
+      "phase": "Traslado a Barcelona",
+      "title": "Madrid a Barcelona",
+      "accommodation": {
+        "address": "Carrer de Muntaner 175, Barcelona, España",
+        "reservationStatus": "no_indicado"
+      },
+      "activities": [
+        {
+          "id": "20261103-01",
+          "time": null,
+          "timeLabel": "Mañana",
+          "name": "Desayuno y check-out",
+          "locationId": null
+        },
+        {
+          "id": "20261103-02",
+          "time": null,
+          "name": "Tren Madrid a Barcelona",
+          "description": "Horario pendiente.",
+          "locationId": "tren-madrid-barcelona",
+          "reservationStatus": "pendiente"
+        },
+        {
+          "id": "20261103-03",
+          "time": null,
+          "timeLabel": "Tarde",
+          "name": "Check-in y descanso",
+          "description": "Carrer de Muntaner 175.",
+          "locationId": "alojamiento-barcelona"
+        },
+        {
+          "id": "20261103-04",
+          "time": null,
+          "timeLabel": "Después",
+          "name": "Paseo por Eixample",
+          "locationId": "eixample"
+        },
+        {
+          "id": "20261103-05",
+          "time": null,
+          "timeLabel": "Noche",
+          "name": "Cena",
+          "locationId": null
+        }
+      ],
+      "notes": [
+        "Casa Batlló se visita únicamente el 6 de noviembre."
+      ]
+    },
+    {
+      "date": "2026-11-04",
+      "weekday": "miércoles",
+      "city": "Barcelona",
+      "phase": "Barcelona",
+      "title": "Montserrat, Costa Brava y Girona",
+      "activities": [
+        {
+          "id": "20261104-01",
+          "time": null,
+          "timeLabel": "Todo el día",
+          "name": "Tour Montserrat, Costa Brava y Girona",
+          "description": "Tour reservado.",
+          "locationId": "tour-montserrat-costa-brava-girona",
+          "reservationStatus": "reservado"
+        },
+        {
+          "id": "20261104-02",
+          "time": null,
+          "timeLabel": "Noche",
+          "name": "Cena y descanso",
+          "locationId": null
+        }
+      ]
+    },
+    {
+      "date": "2026-11-05",
+      "weekday": "jueves",
+      "city": "Barcelona",
+      "phase": "Barcelona",
+      "title": "Gaudí y family time",
+      "activities": [
+        {
+          "id": "20261105-01",
+          "time": "08:15",
+          "name": "Salir del Airbnb",
+          "locationId": "alojamiento-barcelona"
+        },
+        {
+          "id": "20261105-02",
+          "time": "09:00",
+          "name": "Sagrada Família y Torre de la Natividad",
+          "locationId": "sagrada-familia",
+          "reservationStatus": "comprado"
+        },
+        {
+          "id": "20261105-03",
+          "time": "10:45",
+          "timeLabel": "10:45 / 11:00",
+          "name": "Sant Pau",
+          "locationId": "recinte-modernista-sant-pau"
+        },
+        {
+          "id": "20261105-04",
+          "time": "12:15",
+          "name": "Traslado",
+          "locationId": null
+        },
+        {
+          "id": "20261105-05",
+          "time": "13:00",
+          "timeLabel": "Aproximadamente",
+          "name": "Park Güell",
+          "locationId": "park-guell",
+          "reservationStatus": "comprado"
+        },
+        {
+          "id": "20261105-06",
+          "time": "14:30",
+          "name": "Comida en Gràcia",
+          "locationId": "gracia-barcelona"
+        },
+        {
+          "id": "20261105-07",
+          "time": "16:00",
+          "name": "Airbnb y arreglarse",
+          "locationId": "alojamiento-barcelona"
+        },
+        {
+          "id": "20261105-08",
+          "time": "17:00",
+          "timeLabel": "En adelante",
+          "name": "Family time",
+          "locationId": null
+        },
+        {
+          "id": "20261105-09",
+          "time": null,
+          "timeLabel": "Noche",
+          "name": "Salir a bailar",
+          "description": "Lugar pendiente.",
+          "locationId": null,
+          "reservationStatus": "pendiente"
+        }
+      ]
+    },
+    {
+      "date": "2026-11-06",
+      "weekday": "viernes",
+      "city": "Barcelona",
+      "phase": "Barcelona",
+      "title": "EAE y fashion day",
+      "activities": [
+        {
+          "id": "20261106-01",
+          "time": "08:00",
+          "name": "Salida de tu amiga hacia EAE Business School",
+          "locationId": "eae-business-school"
+        },
+        {
+          "id": "20261106-02",
+          "time": "08:00",
+          "endTime": "12:00",
+          "timeLabel": "Mañana libre, hasta las 11:00 / 12:00",
+          "name": "Desayuno, paseo o shopping",
+          "locationId": null
+        },
+        {
+          "id": "20261106-03",
+          "time": "11:00",
+          "endTime": "12:00",
+          "timeLabel": "Entre 11:00 y 12:00",
+          "name": "Reunirse",
+          "locationId": null
+        },
+        {
+          "id": "20261106-04",
+          "time": "12:30",
+          "name": "Museu del Disseny",
+          "description": "Reserva pendiente.",
+          "locationId": "museu-del-disseny",
+          "reservationStatus": "pendiente"
+        },
+        {
+          "id": "20261106-05",
+          "time": "14:00",
+          "endTime": "15:30",
+          "name": "Comida",
+          "locationId": null
+        },
+        {
+          "id": "20261106-06",
+          "time": "15:30",
+          "endTime": "16:45",
+          "name": "Passeig de Gràcia y shopping",
+          "locationId": "passeig-de-gracia"
+        },
+        {
+          "id": "20261106-07",
+          "time": "17:00",
+          "name": "Casa Batlló",
+          "description": "Visita de 17:00 a 18:15.",
+          "locationId": "casa-batllo",
+          "reservationStatus": "comprado"
+        },
+        {
+          "id": "20261106-08",
+          "time": "18:15",
+          "name": "La Pedrera / Casa Milà",
+          "description": "Visita exterior.",
+          "locationId": "casa-mila"
+        },
+        {
+          "id": "20261106-09",
+          "time": null,
+          "timeLabel": "Después",
+          "name": "Rambla Catalunya, shopping y cafés",
+          "locationId": "rambla-catalunya"
+        },
+        {
+          "id": "20261106-10",
+          "time": null,
+          "timeLabel": "Noche",
+          "name": "Cena",
+          "locationId": null
+        }
+      ]
+    },
+    {
+      "date": "2026-11-07",
+      "weekday": "sábado",
+      "city": "Barcelona",
+      "phase": "Barcelona",
+      "title": "Gótico, Born y Barceloneta",
+      "activities": [
+        {
+          "id": "20261107-01",
+          "time": "09:30",
+          "name": "Desayuno",
+          "locationId": null
+        },
+        {
+          "id": "20261107-02",
+          "time": "10:30",
+          "name": "Barrio Gótico",
+          "locationId": "barrio-gotico"
+        },
+        {
+          "id": "20261107-03",
+          "time": "11:00",
+          "name": "Catedral de Barcelona",
+          "locationId": "catedral-barcelona"
+        },
+        {
+          "id": "20261107-04",
+          "time": "11:30",
+          "name": "Pont del Bisbe",
+          "locationId": "pont-del-bisbe"
+        },
+        {
+          "id": "20261107-05",
+          "time": "12:00",
+          "name": "Plaça Reial",
+          "locationId": "placa-reial"
+        },
+        {
+          "id": "20261107-06",
+          "time": "12:30",
+          "endTime": "14:30",
+          "name": "El Born y comida",
+          "description": "Santa Maria del Mar y Mercat de Santa Caterina.",
+          "locationId": "el-born"
+        },
+        {
+          "id": "20261107-07",
+          "time": "15:00",
+          "name": "Arc de Triomf",
+          "locationId": "arc-de-triomf-barcelona"
+        },
+        {
+          "id": "20261107-08",
+          "time": "15:30",
+          "name": "Parc de la Ciutadella",
+          "locationId": "parc-ciutadella"
+        },
+        {
+          "id": "20261107-09",
+          "time": "16:45",
+          "name": "Barceloneta",
+          "locationId": "barceloneta"
+        },
+        {
+          "id": "20261107-10",
+          "time": "17:30",
+          "timeLabel": "Aproximadamente",
+          "name": "Atardecer en la playa",
+          "locationId": "playa-barceloneta"
+        },
+        {
+          "id": "20261107-11",
+          "time": null,
+          "timeLabel": "Noche",
+          "name": "Cena y última noche en Barcelona",
+          "locationId": null
+        }
+      ]
+    },
+    {
+      "date": "2026-11-08",
+      "weekday": "domingo",
+      "city": "Barcelona / Marrakech",
+      "phase": "Marruecos",
+      "title": "Marrakech, Majorelle y YSL",
+      "activities": [
+        {
+          "id": "20261108-01",
+          "time": null,
+          "name": "Vuelo Barcelona a Marrakech",
+          "locationId": "vuelo-barcelona-marrakech",
+          "reservationStatus": "no_indicado"
+        },
+        {
+          "id": "20261108-02",
+          "time": "12:20",
+          "name": "Llegada a Marrakech",
+          "locationId": "aeropuerto-marrakech"
+        },
+        {
+          "id": "20261108-03",
+          "time": null,
+          "timeLabel": "Después de la llegada",
+          "name": "Traslado al hotel",
+          "description": "Traslado al aeropuerto incluido por el tour.",
+          "locationId": null
+        },
+        {
+          "id": "20261108-04",
+          "time": null,
+          "name": "Jardín Majorelle",
+          "description": "Utilizar el horario exacto del boleto.",
+          "locationId": "jardin-majorelle",
+          "reservationStatus": "comprado"
+        },
+        {
+          "id": "20261108-05",
+          "time": null,
+          "name": "Musée Yves Saint Laurent",
+          "description": "Utilizar el horario exacto del boleto.",
+          "locationId": "musee-yves-saint-laurent",
+          "reservationStatus": "comprado"
+        },
+        {
+          "id": "20261108-06",
+          "time": null,
+          "timeLabel": "Noche",
+          "name": "Jemaa el-Fna, cena y descanso",
+          "locationId": "jemaa-el-fna"
+        }
+      ]
+    },
+    {
+      "date": "2026-11-09",
+      "weekday": "lunes",
+      "city": "Marrakech / Valle del Dadès",
+      "phase": "Marruecos",
+      "title": "Alto Atlas, Ait Ben Haddou y Dadès",
+      "activities": [
+        {
+          "id": "20261109-01",
+          "time": null,
+          "name": "Desayuno",
+          "description": "Incluido.",
+          "locationId": null
+        },
+        {
+          "id": "20261109-02",
+          "time": "07:30",
+          "name": "Salida de Marrakech",
+          "locationId": "marrakech"
+        },
+        {
+          "id": "20261109-03",
+          "time": null,
+          "name": "Recorrido por el Alto Atlas",
+          "locationId": "alto-atlas"
+        },
+        {
+          "id": "20261109-04",
+          "time": null,
+          "name": "Ait Ben Haddou",
+          "locationId": "ait-ben-haddou"
+        },
+        {
+          "id": "20261109-05",
+          "time": null,
+          "name": "Ruta de las Mil Kasbahs",
+          "locationId": "ruta-mil-kasbahs"
+        },
+        {
+          "id": "20261109-06",
+          "time": null,
+          "name": "Valle del Dadès",
+          "locationId": "valle-dades"
+        },
+        {
+          "id": "20261109-07",
+          "time": null,
+          "timeLabel": "Noche",
+          "name": "Cena y alojamiento",
+          "description": "Incluidos.",
+          "locationId": null
+        }
+      ],
+      "notes": [
+        "Comida no incluida."
+      ]
+    },
+    {
+      "date": "2026-11-10",
+      "weekday": "martes",
+      "city": "Dadès / Sahara",
+      "phase": "Marruecos",
+      "title": "Todra y Sahara",
+      "activities": [
+        {
+          "id": "20261110-01",
+          "time": null,
+          "name": "Gargantas del Todra",
+          "locationId": "gargantas-todra"
+        },
+        {
+          "id": "20261110-02",
+          "time": null,
+          "name": "Llegada al Sahara",
+          "locationId": "campamento-sahara",
+          "notes": [
+            "La ubicación exacta del campamento está pendiente de confirmar."
+          ]
+        },
+        {
+          "id": "20261110-03",
+          "time": null,
+          "timeLabel": "Tarde",
+          "name": "Paseo en camello",
+          "locationId": "sahara",
+          "reservationStatus": "reservado"
+        },
+        {
+          "id": "20261110-04",
+          "time": null,
+          "timeLabel": "Tarde",
+          "name": "Puesta de sol",
+          "locationId": "sahara"
+        },
+        {
+          "id": "20261110-05",
+          "time": null,
+          "timeLabel": "Tarde",
+          "name": "Sandboarding",
+          "locationId": "sahara",
+          "reservationStatus": "reservado"
+        },
+        {
+          "id": "20261110-06",
+          "time": null,
+          "timeLabel": "Noche",
+          "name": "Campamento, té, cena y música bereber",
+          "locationId": "campamento-sahara"
+        }
+      ],
+      "notes": [
+        "Buggy, RZR y Jeep son actividades extra, no incluidas en las inclusiones indicadas."
+      ]
+    },
+    {
+      "date": "2026-11-11",
+      "weekday": "miércoles",
+      "city": "Sahara / Marrakech",
+      "phase": "Marruecos",
+      "title": "Regreso del Sahara a Marrakech",
+      "activities": [
+        {
+          "id": "20261111-01",
+          "time": null,
+          "timeLabel": "Amanecer",
+          "name": "Amanecer en el Sahara",
+          "locationId": "sahara"
+        },
+        {
+          "id": "20261111-02",
+          "time": null,
+          "name": "Desayuno",
+          "description": "Incluido.",
+          "locationId": "campamento-sahara"
+        },
+        {
+          "id": "20261111-03",
+          "time": "08:30",
+          "name": "Salida hacia Marrakech",
+          "locationId": "marrakech"
+        },
+        {
+          "id": "20261111-04",
+          "time": "19:30",
+          "timeLabel": "Aproximadamente",
+          "name": "Llegada a Marrakech",
+          "locationId": "marrakech"
+        },
+        {
+          "id": "20261111-05",
+          "time": null,
+          "timeLabel": "Noche",
+          "name": "Cena libre y descanso",
+          "locationId": null
+        }
+      ],
+      "notes": [
+        "No se programan actividades adicionales este día."
+      ]
+    },
+    {
+      "date": "2026-11-12",
+      "weekday": "jueves",
+      "city": "Marrakech / Madrid",
+      "phase": "Madrid II",
+      "title": "Marrakech a Madrid",
+      "accommodation": {
+        "address": "Paseo de la Infanta Isabel 19, Madrid, España",
+        "reservationStatus": "no_indicado"
+      },
+      "activities": [
+        {
+          "id": "20261112-01",
+          "time": "09:00",
+          "endTime": "13:00",
+          "name": "City tour de Marrakech",
+          "description": "Koutoubia, Palacio Bahía y Jemaa el-Fna. Incluido.",
+          "locationId": "tour-marrakech",
+          "reservationStatus": "reservado"
+        },
+        {
+          "id": "20261112-02",
+          "time": "13:00",
+          "endTime": "14:00",
+          "name": "Comida y recoger cosas",
+          "locationId": null
+        },
+        {
+          "id": "20261112-03",
+          "time": null,
+          "timeLabel": "Después",
+          "name": "Traslado al aeropuerto",
+          "locationId": "aeropuerto-marrakech"
+        },
+        {
+          "id": "20261112-04",
+          "time": "17:55",
+          "name": "Vuelo Marrakech a Madrid",
+          "locationId": "vuelo-marrakech-madrid",
+          "reservationStatus": "no_indicado"
+        },
+        {
+          "id": "20261112-05",
+          "time": null,
+          "timeLabel": "Noche",
+          "name": "Check-in, cena y dormir",
+          "description": "Paseo de la Infanta Isabel 19.",
+          "locationId": "alojamiento-madrid-retiro"
+        }
+      ]
+    },
+    {
+      "date": "2026-11-13",
+      "weekday": "viernes",
+      "city": "Madrid",
+      "phase": "Madrid II",
+      "title": "Retiro y Prado",
+      "activities": [
+        {
+          "id": "20261113-01",
+          "time": "09:00",
+          "name": "Desayuno",
+          "locationId": null
+        },
+        {
+          "id": "20261113-02",
+          "time": "10:00",
+          "endTime": "11:30",
+          "name": "Parque del Retiro",
+          "locationId": "parque-retiro"
+        },
+        {
+          "id": "20261113-03",
+          "time": "12:00",
+          "name": "Museo del Prado",
+          "locationId": "museo-prado",
+          "reservationStatus": "comprado"
+        },
+        {
+          "id": "20261113-04",
+          "time": "14:00",
+          "endTime": "15:30",
+          "name": "Comida",
+          "locationId": null
+        },
+        {
+          "id": "20261113-05",
+          "time": "15:30",
+          "endTime": "17:30",
+          "name": "Barrio de las Letras",
+          "locationId": "barrio-de-las-letras"
+        },
+        {
+          "id": "20261113-06",
+          "time": "17:30",
+          "name": "Cibeles y Paseo del Prado",
+          "locationId": "cibeles-paseo-prado"
+        },
+        {
+          "id": "20261113-07",
+          "time": null,
+          "timeLabel": "Tarde",
+          "name": "Últimas compras y paseo",
+          "locationId": null
+        },
+        {
+          "id": "20261113-08",
+          "time": null,
+          "timeLabel": "Noche",
+          "name": "Última cena bonita en Madrid",
+          "locationId": null
+        }
+      ]
+    },
+    {
+      "date": "2026-11-14",
+      "weekday": "sábado",
+      "city": "Madrid / México",
+      "phase": "Regreso",
+      "title": "Madrid a México",
+      "activities": [
+        {
+          "id": "20261114-01",
+          "time": null,
+          "timeLabel": "Mañana",
+          "name": "Desayuno y último paseo",
+          "description": "Si el horario del vuelo lo permite.",
+          "locationId": null
+        },
+        {
+          "id": "20261114-02",
+          "time": null,
+          "name": "Check-out y traslado al aeropuerto",
+          "locationId": "aeropuerto-madrid"
+        },
+        {
+          "id": "20261114-03",
+          "time": null,
+          "name": "Vuelo Madrid a México",
+          "description": "Horario pendiente.",
+          "locationId": "vuelo-madrid-mexico",
+          "reservationStatus": "pendiente"
+        }
+      ]
+    }
+  ]
+}
