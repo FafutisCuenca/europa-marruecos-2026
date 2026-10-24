@@ -367,7 +367,7 @@
       #mapLocationList .map-pending {
         color: #8a5b20;
       }
-
+/*
       #toggleItineraryLocations {
         display: inline-flex;
         align-items: center;
@@ -385,7 +385,7 @@
       #toggleItineraryLocations:hover {
         background: #e8eee5;
       }
-
+*/
       @media (max-width: 620px) {
         #routeTransportSummary {
           grid-template-columns: minmax(0, 1fr);
@@ -496,7 +496,7 @@
     summary.hidden = true;
   }
 
-  // ------------------------------------------------------------
+    // ------------------------------------------------------------
   // LISTA DEL ITINERARIO MOSTRAR / OCULTAR
   // ------------------------------------------------------------
 
@@ -504,23 +504,27 @@
     const list = getElement("mapLocationList");
     if (!list) return;
 
-    let button = getElement("toggleItineraryLocations");
+    // Buscar el control existente en el HTML.
+    // No crear un botón adicional.
+    const button = getElement("toggleItineraryLocations");
 
+    // Si el control existente no tiene este ID, no hacemos nada aquí.
     if (!button) {
-      button = document.createElement("button");
-      button.id = "toggleItineraryLocations";
-      button.type = "button";
-
-      list.parentNode.insertBefore(button, list);
+      list.hidden = false;
+      return;
     }
 
     button.setAttribute("aria-controls", "mapLocationList");
-    button.setAttribute("aria-expanded", "false");
 
     state.locationListExpanded = false;
     list.hidden = true;
 
     updateLocationListToggle();
+
+    // Evitar registrar varias veces el evento.
+    if (button.dataset.toggleInitialized === "true") return;
+
+    button.dataset.toggleInitialized = "true";
 
     button.addEventListener("click", function () {
       state.locationListExpanded = !state.locationListExpanded;
@@ -548,7 +552,6 @@
       ? "Ocultar lugares del itinerario ▲"
       : "Ver todos los lugares del itinerario ▼";
   }
-
   // ------------------------------------------------------------
   // MAPA LEAFLET
   // ------------------------------------------------------------
