@@ -294,6 +294,7 @@
       </p>
     </section>
 
+
     <section class="filters" aria-label="Filtros del mapa">
       <div class="field">
         <label for="mapCityFilter">Filtrar por ciudad</label>
@@ -312,6 +313,51 @@
         >
       </div>
     </section>
+
+    <section class="filters" id="routePanel" aria-label="Planificador de rutas">
+      <div class="field">
+        <label for="routeOrigin">Punto de origen</label>
+        <select id="routeOrigin" disabled>
+          <option value="">Primero carga las ubicaciones</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="routeDestination">Punto de destino</label>
+        <select id="routeDestination" disabled>
+          <option value="">Primero carga las ubicaciones</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="routeMode">Medio de transporte</label>
+        <select id="routeMode">
+          <option value="driving">Automóvil</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>&nbsp;</label>
+        <div style="display:flex; gap:8px; flex-wrap:wrap">
+          <button type="button" id="calculateRoute"
+            style="min-height:44px; padding:10px 14px; border:0; border-radius:7px; background:#173c35; color:white; font-weight:bold; cursor:pointer">
+            Calcular ruta
+          </button>
+          <button type="button" id="clearRoute"
+            style="min-height:44px; padding:10px 14px; border:1px solid #c9d0ca; border-radius:7px; background:white; color:#25332e; cursor:pointer">
+            Limpiar
+          </button>
+        </div>
+      </div>
+
+      <div style="grid-column:1 / -1">
+        <p id="routeStatus" class="status" role="status" aria-live="polite">
+          Selecciona un origen y un destino para calcular la ruta.
+        </p>
+        <div id="routeSummary" aria-live="polite"></div>
+      </div>
+    </section>
+>
 
     <p
       id="mapStatus"
