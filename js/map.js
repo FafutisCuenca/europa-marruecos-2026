@@ -333,8 +333,39 @@
         typeof location.name === "string"
       );
 
+
+      // Leer filtros y ubicación solicitada desde la URL.
+      const params = new URLSearchParams(window.location.search);
+      const requestedCity = params.get("city");
+      const requestedLocation = params.get("location");
+
+      // Aplicar filtro de ciudad si corresponde.
+      if (requestedCity) {
+        const matchingCity = allLocations.find(location =>
+          String(location.city || "").toLocaleLowerCase("es") ===
+          requestedCity.toLocaleLowerCase("es")
+        );
+
+        state.city = matchingCity ? matchingCity.city : "all";
+      } else {
+        state.city = "all";
+      }
+
       renderCityOptions();
       renderMarkers();
+
+      // Abrir el marcador solicitado, si existe.
+      if (requestedLocation) {
+        const found = window.TripMap.showLocation(requestedLocation);
+
+        if (!found) {
+          showStatus(
+            "No hay un marcador disponible para este lugar. " +
+            "Verifica su locationId y sus coordenadas en locations.json."
+          );
+        }
+      }
+
 
       // Si la página recibe ?location=ID, abrir ese lugar en el mapa.
       const params = new URLSearchParams(window.location.search);
