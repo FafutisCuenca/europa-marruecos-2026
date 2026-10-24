@@ -336,6 +336,21 @@
       renderCityOptions();
       renderMarkers();
 
+      // Si la página recibe ?location=ID, abrir ese lugar en el mapa.
+      const params = new URLSearchParams(window.location.search);
+      const requestedLocation = params.get("location");
+
+      if (requestedLocation) {
+        const found = window.TripMap.showLocation(requestedLocation);
+
+        if (!found) {
+          showStatus(
+            "El lugar solicitado no tiene un marcador disponible. " +
+            "Puede estar pendiente de coordenadas o de revisión."
+          );
+        }
+      }
+
       if (allLocations.length === 0) {
         showStatus("No se encontraron ubicaciones en el archivo.");
       }
