@@ -244,6 +244,49 @@
       margin: 4px;
     }
 
+    
+    #routePanel {
+      margin-top: 14px;
+    }
+
+    #calculateRoute:disabled,
+    #clearRoute:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    #routeStatus {
+      margin-bottom: 8px;
+    }
+
+    #routeSummary:empty {
+      display: none;
+    }
+
+    #routeSummary:not(:empty) {
+      padding: 14px;
+      background: #fffdf8;
+      border: 1px solid #e3e1d7;
+      border-radius: 9px;
+    }
+
+    .route-summary-title {
+      margin: 0 0 8px;
+      font-weight: bold;
+    }
+
+    .route-summary-detail {
+      margin: 4px 0;
+      color: #68766f;
+    }
+
+    .route-summary-warning {
+      margin-top: 8px;
+      color: #865f21;
+      font-size: 0.9rem;
+    }
+
+    
     @media (max-width: 650px) {
       .hero {
         padding: 23px 16px;
