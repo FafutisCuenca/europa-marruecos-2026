@@ -7,10 +7,10 @@
  * - Mapa interactivo con Leaflet.
  * - Filtros por ciudad y texto.
  * - Apertura de ubicaciones desde el itinerario.
- * - Origen libre con sugerencias geográficas.
- * - Búsqueda de lugares con Photon / OpenStreetMap.
- * - Entrada manual de coordenadas: latitud, longitud.
- * - Rutas para automóvil y a pie.
+ * - Origen y destino con búsqueda libre y sugerencias.
+ * - Búsqueda local en locations.json y externa con Photon.
+ * - Coordenadas manuales: latitud, longitud.
+ * - Rutas en automóvil y a pie.
  * - Distancia, duración estimada y limpieza de rutas.
  *
  * Servicios públicos:
@@ -18,7 +18,7 @@
  * - OpenStreetMap: mapa base.
  * - OSRM público de FOSSGIS: cálculo de rutas.
  *
- * Se requiere conexión a internet.
+ * Requiere conexión a internet.
  */
 
 (function () {
@@ -41,7 +41,8 @@
     routeColor: "#d34b35",
     searchDelay: 500,
     minimumSearchLength: 3,
-    maximumSuggestions: 6
+    maximumSuggestions: 6,
+    photonMinimumInterval: 1000
   };
 
   let map = null;
@@ -54,13 +55,27 @@
   let currentRoute = null;
   let routeRequestInProgress = false;
 
+  // Origen y destino elegidos por el usuario.
   let selectedOrigin = null;
-  let searchTimer = null;
-  let searchController = null;
-  let searchSequence = 0;
-  let lastPhotonRequestAt = 0;
+  let selectedDestination = null;
 
-  let suggestionPanel = null;
+  // Estado independiente para las búsquedas de origen y destino.
+  const searches = {
+    origin: {
+      timer: null,
+      controller: null,
+      sequence: 0,
+      panel: null,
+      lastPhotonRequestAt: 0
+    },
+    destination: {
+      timer: null,
+      controller: null,
+      sequence: 0,
+      panel: null,
+      lastPhotonRequestAt: 0
+    }
+  };
 
   const state = {
     city: "all",
@@ -78,14 +93,14 @@
   function hasCoordinates(location) {
     return Boolean(
       location &&
-      typeof location.latitude === "number" &&
-      Number.isFinite(location.latitude) &&
-      typeof location.longitude === "number" &&
-      Number.isFinite(location.longitude) &&
-      location.latitude >= -90 &&
-      location.latitude <= 90 &&
-      location.longitude >= -180 &&
-      location.longitude <= 180
+      Number.isFinite(Number(location.latitude)) &&
+      Number.isFinite(Number(location.longitude)) &&
+      location.latitude !== "" &&
+      location.longitude !== "" &&
+      Number(location.latitude) >= -90 &&
+      Number(location.latitude) <= 90 &&
+      Number(location.longitude) >= -180 &&
+      Number(location.longitude) <= 180
     );
   }
 
@@ -131,9 +146,15 @@
   }
 
   function getOriginLabel(origin) {
-    return origin.label ||
-      getLocationLabel(origin) ||
-      "Origen seleccionado";
+    return origin && origin.label
+      ? origin.label
+      : getLocationLabel(origin || {});
+  }
+
+  function getDestinationLabel(destination) {
+    return destination && destination.label
+      ? destination.label
+      : getLocationLabel(destination || {});
   }
 
   function showStatus(message) {
@@ -195,9 +216,24 @@
       address: location.address || "",
       city: location.city || "",
       country: location.country || "",
-      latitude: location.latitude,
-      longitude: location.longitude,
-      label: location.label || getLocationLabel(location)
+      latitude: Number(location.latitude),
+      longitude: Number(location.longitude),
+      label: location.label || getLocationLabel(location),
+      source: location.source || "itinerary"
+    };
+  }
+
+  function makeDestination(location) {
+    return {
+      id: location.id ?? null,
+      name: location.name || "Destino",
+      address: location.address || "",
+      city: location.city || "",
+      country: location.country || "",
+      latitude: Number(location.latitude),
+      longitude: Number(location.longitude),
+      label: location.label || getLocationLabel(location),
+      source: location.source || "itinerary"
     };
   }
 
@@ -304,8 +340,8 @@
 
     visibleLocations.forEach(location => {
       const marker = L.marker([
-        location.latitude,
-        location.longitude
+        Number(location.latitude),
+        Number(location.longitude)
       ]);
 
       marker.bindPopup(createPopup(location));
@@ -316,8 +352,8 @@
       }
 
       bounds.push([
-        location.latitude,
-        location.longitude
+        Number(location.latitude),
+        Number(location.longitude)
       ]);
     });
 
@@ -458,24 +494,57 @@
   }
 
   // ------------------------------------------------------------
-  // ORIGEN LIBRE Y SUGERENCIAS
+  // CONVERTIR DESTINO SELECT A CAMPO DE TEXTO
   // ------------------------------------------------------------
 
-  function ensureSuggestionPanel() {
-    const input = getElement("routeOrigin");
+  function prepareDestinationInput() {
+    const existing = getElement("routeDestination");
 
-    if (!input || suggestionPanel) return;
+    if (!existing || existing.tagName === "INPUT") return;
 
-    suggestionPanel = document.createElement("div");
-    suggestionPanel.id = "routeOriginSuggestionsPanel";
+    const input = document.createElement("input");
 
-    Object.assign(suggestionPanel.style, {
+    input.type = "text";
+    input.id = "routeDestination";
+    input.name = existing.name || "routeDestination";
+    input.placeholder = "Escribe un destino o selecciona una sugerencia";
+    input.autocomplete = "off";
+    input.setAttribute("aria-label", "Punto de destino");
+    input.setAttribute("aria-autocomplete", "list");
+
+    // Conservar las clases visuales del selector original.
+    input.className = existing.className || "";
+
+    existing.replaceWith(input);
+  }
+
+  // ------------------------------------------------------------
+  // BÚSQUEDA Y SUGERENCIAS PARA ORIGEN Y DESTINO
+  // ------------------------------------------------------------
+
+  function ensureSuggestionPanel(type) {
+    const inputId = type === "origin"
+      ? "routeOrigin"
+      : "routeDestination";
+
+    const input = getElement(inputId);
+
+    if (!input || searches[type].panel) return;
+
+    const panel = document.createElement("div");
+    panel.id = type === "origin"
+      ? "routeOriginSuggestionsPanel"
+      : "routeDestinationSuggestionsPanel";
+
+    panel.setAttribute("role", "listbox");
+
+    Object.assign(panel.style, {
       display: "none",
       position: "absolute",
       top: "calc(100% + 4px)",
       left: "0",
       right: "0",
-      zIndex: "2000",
+      zIndex: "3000",
       maxHeight: "280px",
       overflowY: "auto",
       background: "#fffdf8",
@@ -488,21 +557,29 @@
 
     if (field) {
       field.style.position = "relative";
-      field.appendChild(suggestionPanel);
+      field.appendChild(panel);
+    } else {
+      input.insertAdjacentElement("afterend", panel);
+    }
+
+    searches[type].panel = panel;
+  }
+
+  function hideSuggestions(type) {
+    const panel = searches[type].panel;
+
+    if (panel) {
+      panel.style.display = "none";
+      panel.innerHTML = "";
     }
   }
 
-  function hideSuggestions() {
-    if (suggestionPanel) {
-      suggestionPanel.style.display = "none";
-      suggestionPanel.innerHTML = "";
-    }
-  }
+  function addSuggestionMessage(type, message) {
+    const panel = searches[type].panel;
 
-  function addSuggestionMessage(message) {
-    if (!suggestionPanel) return;
+    if (!panel) return;
 
-    suggestionPanel.innerHTML = "";
+    panel.innerHTML = "";
 
     const item = document.createElement("div");
 
@@ -513,17 +590,20 @@
     });
 
     item.textContent = message;
-    suggestionPanel.appendChild(item);
-    suggestionPanel.style.display = "block";
+    panel.appendChild(item);
+    panel.style.display = "block";
   }
 
-  function renderSuggestions(items, messageIfEmpty) {
-    if (!suggestionPanel) return;
+  function renderSuggestions(type, items, messageIfEmpty) {
+    const panel = searches[type].panel;
 
-    suggestionPanel.innerHTML = "";
+    if (!panel) return;
+
+    panel.innerHTML = "";
 
     if (!items.length) {
       addSuggestionMessage(
+        type,
         messageIfEmpty || "No se encontraron lugares."
       );
       return;
@@ -534,6 +614,7 @@
 
       button.type = "button";
       button.textContent = item.label;
+      button.setAttribute("role", "option");
 
       Object.assign(button.style, {
         display: "block",
@@ -558,37 +639,45 @@
       });
 
       button.addEventListener("click", function () {
-        chooseOrigin(item);
+        chooseSearchResult(type, item);
       });
 
-      suggestionPanel.appendChild(button);
+      panel.appendChild(button);
     });
 
-    suggestionPanel.style.display = "block";
+    panel.style.display = "block";
   }
 
-  function chooseOrigin(origin) {
-    const input = getElement("routeOrigin");
+  function chooseSearchResult(type, item) {
+    const input = getElement(
+      type === "origin" ? "routeOrigin" : "routeDestination"
+    );
 
     if (!input) return;
 
-    selectedOrigin = {
-      ...origin,
-      latitude: Number(origin.latitude),
-      longitude: Number(origin.longitude)
+    const chosen = {
+      ...item,
+      latitude: Number(item.latitude),
+      longitude: Number(item.longitude)
     };
 
-    input.value = origin.label || getOriginLabel(selectedOrigin);
+    if (type === "origin") {
+      selectedOrigin = chosen;
+      input.value = chosen.label || getOriginLabel(chosen);
+    } else {
+      selectedDestination = chosen;
+      input.value = chosen.label || getDestinationLabel(chosen);
+    }
 
-    hideSuggestions();
-
-    showRouteStatus(
-      `Origen seleccionado: ${getOriginLabel(selectedOrigin)}. Ahora elige el destino y calcula la ruta.`
-    );
+    hideSuggestions(type);
 
     if (currentRoute) {
       clearRoute({ showStatus: false });
     }
+
+    showRouteStatus(
+      `${type === "origin" ? "Origen" : "Destino"} seleccionado: ${chosen.label}. Pulsa «Calcular ruta» para continuar.`
+    );
   }
 
   function getLocalSuggestions(query) {
@@ -602,7 +691,8 @@
           location.name,
           location.address,
           location.city,
-          location.country
+          location.country,
+          location.type
         ].some(value =>
           normalizeText(value).includes(normalizedQuery)
         );
@@ -614,8 +704,8 @@
         address: location.address || "",
         city: location.city || "",
         country: location.country || "",
-        latitude: location.latitude,
-        longitude: location.longitude,
+        latitude: Number(location.latitude),
+        longitude: Number(location.longitude),
         label: getLocationLabel(location),
         source: "itinerary"
       }));
@@ -645,12 +735,13 @@
     if (!coordinates) return null;
 
     const label = createExternalLabel(feature);
+    const properties = feature.properties || {};
 
     return {
       ...label,
       address: [
-        feature.properties && feature.properties.street,
-        feature.properties && feature.properties.housenumber
+        properties.street,
+        properties.housenumber
       ].filter(Boolean).join(" "),
       latitude: coordinates.latitude,
       longitude: coordinates.longitude,
@@ -658,67 +749,78 @@
     };
   }
 
-  async function searchPhoton(query, sequence) {
+  async function searchPhoton(query, type, sequence) {
+    const searchState = searches[type];
+
     const url = new URL(CONFIG.photonUrl);
 
     url.searchParams.set("q", query);
     url.searchParams.set("limit", "6");
     url.searchParams.set("lang", "es");
 
-    if (searchController) {
-      searchController.abort();
+    if (searchState.controller) {
+      searchState.controller.abort();
     }
 
-    searchController = new AbortController();
+    const controller = new AbortController();
+    searchState.controller = controller;
 
-    // Evitar solicitudes demasiado frecuentes al servicio público.
-    const elapsed = Date.now() - lastPhotonRequestAt;
-    const wait = Math.max(0, 1000 - elapsed);
+    const elapsed = Date.now() - searchState.lastPhotonRequestAt;
+    const wait = Math.max(
+      0,
+      CONFIG.photonMinimumInterval - elapsed
+    );
 
     if (wait) {
       await new Promise(resolve => setTimeout(resolve, wait));
     }
 
-    if (sequence !== searchSequence) return [];
+    if (sequence !== searchState.sequence) return [];
 
-    lastPhotonRequestAt = Date.now();
+    searchState.lastPhotonRequestAt = Date.now();
 
     const response = await fetch(url.toString(), {
-      signal: searchController.signal,
+      signal: controller.signal,
       headers: {
         Accept: "application/json"
       }
     });
 
     if (!response.ok) {
-      throw new Error(`El buscador respondió HTTP ${response.status}.`);
+      throw new Error(
+        `El buscador respondió HTTP ${response.status}.`
+      );
     }
 
     const data = await response.json();
 
-    if (sequence !== searchSequence) return [];
+    if (sequence !== searchState.sequence) return [];
 
     return (data.features || [])
       .map(mapPhotonFeature)
       .filter(Boolean);
   }
 
-  async function performOriginSearch(query, sequence) {
+  async function performSearch(type, query, sequence) {
     const localResults = getLocalSuggestions(query);
 
-    // Mostrar primero los resultados locales del itinerario.
     if (localResults.length) {
-      renderSuggestions(localResults, "");
+      renderSuggestions(type, localResults, "");
     } else {
-      addSuggestionMessage("Buscando lugares…");
+      addSuggestionMessage(type, "Buscando lugares…");
     }
 
     try {
-      const remoteResults = await searchPhoton(query, sequence);
+      const remoteResults = await searchPhoton(
+        query,
+        type,
+        sequence
+      );
 
-      if (sequence !== searchSequence) return;
+      if (sequence !== searches[type].sequence) return;
 
       const combined = [...localResults];
+
       const seen = new Set(
         combined.map(item =>
           `${normalizeText(item.name)}|${item.latitude.toFixed(5)}|${item.longitude.toFixed(5)}`
@@ -736,49 +838,67 @@
       });
 
       renderSuggestions(
+        type,
         combined.slice(0, CONFIG.maximumSuggestions),
-        "No se encontraron lugares. Prueba con una dirección más completa."
+        "No se encontraron lugares. Prueba con un nombre más completo o incluye la ciudad."
       );
     } catch (error) {
       if (error.name === "AbortError") return;
 
-      console.warn("No fue posible consultar Photon:", error);
+      console.warn(
+        `No fue posible consultar Photon para ${type}:`,
+        error
+      );
 
-      if (sequence !== searchSequence) return;
+      if (sequence !== searches[type].sequence) return;
 
       renderSuggestions(
+        type,
         localResults,
         localResults.length
           ? "No se pudo consultar el buscador externo. Puedes elegir un lugar del itinerario."
-          : "No se pudo consultar el buscador. Comprueba tu conexión o introduce coordenadas."
+          : "No se pudo consultar el buscador. Comprueba tu conexión o introduce latitud, longitud."
       );
     }
   }
 
-  function connectOriginSearch() {
-    const input = getElement("routeOrigin");
+  function connectSearch(type) {
+    const inputId = type === "origin"
+      ? "routeOrigin"
+      : "routeDestination";
+
+    const input = getElement(inputId);
 
     if (!input) return;
 
-    ensureSuggestionPanel();
+    ensureSuggestionPanel(type);
+
+    input.setAttribute("autocomplete", "off");
+    input.setAttribute("aria-autocomplete", "list");
 
     input.addEventListener("input", function () {
-      selectedOrigin = null;
+      if (type === "origin") {
+        selectedOrigin = null;
+      } else {
+        selectedDestination = null;
+      }
 
       if (currentRoute) {
         clearRoute({ showStatus: false });
       }
 
-      if (searchTimer) {
-        clearTimeout(searchTimer);
+      const searchState = searches[type];
+
+      if (searchState.timer) {
+        clearTimeout(searchState.timer);
       }
 
-      searchSequence += 1;
-      const sequence = searchSequence;
+      searchState.sequence += 1;
+      const sequence = searchState.sequence;
       const query = input.value.trim();
 
-      if (searchController) {
-        searchController.abort();
+      if (searchState.controller) {
+        searchState.controller.abort();
       }
 
       if (query.length < CONFIG.minimumSearchLength) {
@@ -787,16 +907,16 @@
           : [];
 
         if (localResults.length) {
-          renderSuggestions(localResults, "");
+          renderSuggestions(type, localResults, "");
         } else {
-          hideSuggestions();
+          hideSuggestions(type);
         }
 
         return;
       }
 
-      searchTimer = setTimeout(function () {
-        performOriginSearch(query, sequence);
+      searchState.timer = setTimeout(function () {
+        performSearch(type, query, sequence);
       }, CONFIG.searchDelay);
     });
 
@@ -809,44 +929,48 @@
     });
 
     input.addEventListener("keydown", function (event) {
+      const panel = searches[type].panel;
+
       if (event.key === "Escape") {
-        hideSuggestions();
+        hideSuggestions(type);
       }
 
       if (event.key === "Enter") {
         event.preventDefault();
 
-        const firstButton = suggestionPanel &&
-          suggestionPanel.querySelector("button");
+        const firstButton = panel && panel.querySelector("button");
 
         if (
-          suggestionPanel &&
-          suggestionPanel.style.display !== "none" &&
+          panel &&
+          panel.style.display !== "none" &&
           firstButton
         ) {
           firstButton.click();
         } else {
-          hideSuggestions();
+          hideSuggestions(type);
+
           showRouteStatus(
-            "Si escribiste una dirección, pulsa «Calcular ruta» para buscarla. También puedes escribir latitud, longitud."
+            "Selecciona una sugerencia o introduce las coordenadas como latitud, longitud."
           );
         }
       }
     });
 
     document.addEventListener("click", function (event) {
+      const panel = searches[type].panel;
+
       if (
-        suggestionPanel &&
-        !suggestionPanel.contains(event.target) &&
+        panel &&
+        !panel.contains(event.target) &&
         event.target !== input
       ) {
-        hideSuggestions();
+        hideSuggestions(type);
       }
     });
   }
 
   // ------------------------------------------------------------
-  // RESOLVER EL ORIGEN
+  // RESOLVER ORIGEN Y DESTINO
   // ------------------------------------------------------------
 
   function parseCoordinates(text) {
@@ -887,131 +1011,139 @@
     }) || null;
   }
 
-  async function resolveOrigin() {
-    const input = getElement("routeOrigin");
+  async function resolvePoint(type) {
+    const isOrigin = type === "origin";
+    const input = getElement(
+      isOrigin ? "routeOrigin" : "routeDestination"
+    );
+
     const text = input ? input.value.trim() : "";
+    const selected = isOrigin
+      ? selectedOrigin
+      : selectedDestination;
 
     if (!text) {
-      throw new Error("Escribe un lugar o unas coordenadas para el origen.");
+      throw new Error(
+        `Escribe un lugar o unas coordenadas para el ${isOrigin ? "origen" : "destino"}.`
+      );
     }
 
-    // Si el usuario eligió una sugerencia, usar esas coordenadas.
+    // Usar las coordenadas exactas de la sugerencia seleccionada.
     if (
-      selectedOrigin &&
-      normalizeText(selectedOrigin.label) === normalizeText(text) &&
-      hasCoordinates(selectedOrigin)
+      selected &&
+      normalizeText(selected.label) === normalizeText(text) &&
+      hasCoordinates(selected)
     ) {
-      return selectedOrigin;
+      return selected;
     }
 
-    // Aceptar coordenadas manuales: latitud, longitud.
+    // Aceptar coordenadas introducidas manualmente.
     const coordinates = parseCoordinates(text);
 
     if (coordinates) {
-      return {
-        name: "Coordenadas manuales",
+      const result = {
+        name: isOrigin ? "Origen por coordenadas" : "Destino por coordenadas",
         label: `Coordenadas: ${coordinates.latitude}, ${coordinates.longitude}`,
         latitude: coordinates.latitude,
         longitude: coordinates.longitude,
         source: "coordinates"
       };
+
+      if (isOrigin) {
+        selectedOrigin = result;
+      } else {
+        selectedDestination = result;
+      }
+
+      return result;
     }
 
-    // Intentar encontrar una coincidencia exacta del itinerario.
+    // Buscar coincidencia exacta en el itinerario.
     const local = findExactLocalLocation(text);
 
     if (local) {
-      return makeOrigin(local);
+      const result = isOrigin
+        ? makeOrigin(local)
+        : makeDestination(local);
+
+      if (isOrigin) {
+        selectedOrigin = result;
+      } else {
+        selectedDestination = result;
+      }
+
+      return result;
     }
 
-    // Si es una dirección o un lugar externo, buscarlo en Photon.
-    showRouteStatus("Buscando las coordenadas del origen…");
+    // Si no coincide con el itinerario, consultar Photon.
+    showRouteStatus(
+      `Buscando las coordenadas del ${isOrigin ? "origen" : "destino"}…`
+    );
 
-    const results = await searchPhoton(text, ++searchSequence);
+    const sequence = ++searches[type].sequence;
+    const results = await searchPhoton(text, type, sequence);
 
     if (!results.length) {
       throw new Error(
-        "No se encontró el origen. Prueba con el nombre y la ciudad, selecciona una sugerencia o introduce latitud, longitud."
+        `No se encontró el ${isOrigin ? "origen" : "destino"}. Prueba con el nombre y la ciudad, selecciona una sugerencia o introduce latitud, longitud.`
       );
     }
 
-    // Una consulta explícita al calcular ruta usa el primer resultado.
-    // Si hay ambigüedad, conviene elegir la sugerencia correcta.
     if (results.length > 1) {
-      const inputElement = getElement("routeOrigin");
+      renderSuggestions(type, results, "");
 
-      if (inputElement) {
-        renderSuggestions(results, "");
-        showRouteStatus(
-          "Se encontraron varios lugares. Selecciona la sugerencia correcta antes de calcular la ruta."
-        );
-      }
+      showRouteStatus(
+        `Se encontraron varias coincidencias para el ${isOrigin ? "origen" : "destino"}. Selecciona la correcta en las sugerencias.`
+      );
 
       throw new Error(
-        "Hay varias coincidencias posibles. Selecciona el lugar correcto en las sugerencias."
+        `Hay varias coincidencias para el ${isOrigin ? "origen" : "destino"}. Selecciona el lugar correcto en las sugerencias.`
       );
     }
 
     const result = results[0];
 
-    selectedOrigin = result;
+    if (isOrigin) {
+      selectedOrigin = result;
+    } else {
+      selectedDestination = result;
+    }
 
     if (input) {
       input.value = result.label;
     }
 
-    hideSuggestions();
+    hideSuggestions(type);
 
     return result;
   }
 
   // ------------------------------------------------------------
-  // DESTINO Y CONTROLES DE RUTA
+  // CONTROLES Y DATOS DEL ITINERARIO
   // ------------------------------------------------------------
 
-  function getRoutableLocations() {
-    return allLocations
-      .filter(hasCoordinates)
-      .slice()
-      .sort((a, b) => {
-        const cityCompare = String(a.city || "").localeCompare(
-          String(b.city || ""),
-          "es"
-        );
-
-        return cityCompare ||
-          String(a.name || "").localeCompare(
-            String(b.name || ""),
-            "es"
-          );
-      });
-  }
-
   function populateRouteSelectors() {
-    const destinationSelect = getElement("routeDestination");
+    // routeDestination ahora es un campo de texto, no un selector.
+    const destinationInput = getElement("routeDestination");
+    const originInput = getElement("routeOrigin");
 
-    if (!destinationSelect) return;
+    const locations = allLocations.filter(hasCoordinates);
 
-    const locations = getRoutableLocations();
+    if (destinationInput) {
+      destinationInput.disabled = false;
+    }
 
-    destinationSelect.innerHTML = [
-      '<option value="">Selecciona el destino</option>',
-      ...locations.map(location => `
-        <option value="${escapeHtml(location.id ?? "")}">
-          ${escapeHtml(getLocationLabel(location))}
-        </option>
-      `)
-    ].join("");
-
-    destinationSelect.disabled = locations.length === 0;
+    if (originInput) {
+      originInput.disabled = false;
+    }
 
     const calculateButton = getElement("calculateRoute");
 
     if (calculateButton) {
-      calculateButton.disabled = locations.length === 0;
+      calculateButton.disabled = false;
     }
 
-    // Llenar datalist por compatibilidad con el HTML.
+    // Se conserva el datalist de origen si existe.
     const datalist = getElement("routeOriginSuggestions");
 
     if (datalist) {
@@ -1022,22 +1154,13 @@
 
     if (!locations.length) {
       showRouteStatus(
-        "No hay destinos con coordenadas válidas. Revisa locations.json."
+        "No hay ubicaciones con coordenadas válidas en locations.json. Puedes introducir un origen y un destino mediante coordenadas."
       );
     } else {
       showRouteStatus(
-        `${locations.length} destinos disponibles. Escribe un origen o selecciona una sugerencia.`
+        `${locations.length} lugares del itinerario disponibles como sugerencias. También puedes buscar lugares externos.`
       );
     }
-  }
-
-  function findLocationById(id) {
-    return allLocations.find(
-      location =>
-        location.id !== undefined &&
-        location.id !== null &&
-        String(location.id) === String(id)
-    );
   }
 
   function formatDistance(meters) {
@@ -1068,7 +1191,9 @@
     if (!summary) return;
 
     const originName = escapeHtml(getOriginLabel(origin));
-    const destinationName = escapeHtml(getLocationLabel(destination));
+    const destinationName = escapeHtml(
+      getDestinationLabel(destination)
+    );
     const distance = escapeHtml(formatDistance(route.distance));
     const duration = escapeHtml(formatDuration(route.duration));
     const modeLabel = mode === "walking" ? "A pie" : "Automóvil";
@@ -1107,31 +1232,35 @@
     }
   }
 
+  // ------------------------------------------------------------
+  // CÁLCULO DE RUTA
+  // ------------------------------------------------------------
+
   async function calculateRoute() {
     if (routeRequestInProgress) return;
 
-    const destinationSelect = getElement("routeDestination");
     const modeSelect = getElement("routeMode");
     const calculateButton = getElement("calculateRoute");
 
-    if (!destinationSelect) {
-      showRouteStatus("No se encontró el campo de destino.");
-      return;
-    }
+    const originInput = getElement("routeOrigin");
+    const destinationInput = getElement("routeDestination");
 
-    const destinationId = destinationSelect.value;
-
-    if (!destinationId) {
-      showRouteStatus("Selecciona un destino del itinerario.");
-      return;
-    }
-
-    const destination = findLocationById(destinationId);
-
-    if (!destination || !hasCoordinates(destination)) {
+    if (!originInput || !destinationInput) {
       showRouteStatus(
-        "El destino seleccionado no tiene coordenadas válidas."
+        "No se encontraron los campos de origen y destino."
       );
+      return;
+    }
+
+    if (!originInput.value.trim()) {
+      showRouteStatus("Escribe o selecciona un punto de origen.");
+      originInput.focus();
+      return;
+    }
+
+    if (!destinationInput.value.trim()) {
+      showRouteStatus("Escribe o selecciona un punto de destino.");
+      destinationInput.focus();
       return;
     }
 
@@ -1148,18 +1277,23 @@
     clearRoute({ showStatus: false });
 
     try {
-      const origin = await resolveOrigin();
+      const origin = await resolvePoint("origin");
+      const destination = await resolvePoint("destination");
 
       if (!hasCoordinates(origin)) {
         throw new Error("El origen no contiene coordenadas válidas.");
       }
 
+      if (!hasCoordinates(destination)) {
+        throw new Error("El destino no contiene coordenadas válidas.");
+      }
+
       if (
-        Math.abs(origin.latitude - destination.latitude) < 0.000001 &&
-        Math.abs(origin.longitude - destination.longitude) < 0.000001
+        Math.abs(Number(origin.latitude) - Number(destination.latitude)) < 0.000001 &&
+        Math.abs(Number(origin.longitude) - Number(destination.longitude)) < 0.000001
       ) {
         throw new Error(
-          "El origen y el destino son el mismo punto. Selecciona otro destino."
+          "El origen y el destino son el mismo punto. Selecciona otro lugar."
         );
       }
 
@@ -1204,7 +1338,7 @@
         !data.routes[0].geometry
       ) {
         throw new Error(
-          "No se encontró una ruta entre esos puntos. Revisa las coordenadas o intenta con otro punto cercano."
+          "No se encontró una ruta entre esos puntos. Revisa las ubicaciones o intenta con un punto cercano."
         );
       }
 
@@ -1225,7 +1359,7 @@
       routeLine.addTo(routeLayer);
 
       const originMarker = L.circleMarker(
-        [origin.latitude, origin.longitude],
+        [Number(origin.latitude), Number(origin.longitude)],
         {
           radius: 7,
           color: "#ffffff",
@@ -1242,7 +1376,7 @@
       originMarker.addTo(routeLayer);
 
       const destinationMarker = L.circleMarker(
-        [destination.latitude, destination.longitude],
+        [Number(destination.latitude), Number(destination.longitude)],
         {
           radius: 7,
           color: "#ffffff",
@@ -1253,7 +1387,7 @@
       );
 
       destinationMarker.bindPopup(
-        `<strong>Destino:</strong> ${escapeHtml(getLocationLabel(destination))}`
+        `<strong>Destino:</strong> ${escapeHtml(getDestinationLabel(destination))}`
       );
 
       destinationMarker.addTo(routeLayer);
@@ -1269,10 +1403,11 @@
 
       currentRoute = {
         origin: makeOrigin(origin),
-        destinationId: destination.id,
+        destination: makeDestination(destination),
         mode,
         distance: route.distance,
-        duration: route.duration
+        duration: route.duration,
+        geometry: route.geometry
       };
 
       renderRouteSummary(origin, destination, route, mode);
@@ -1297,7 +1432,6 @@
   function connectRouteControls() {
     const calculateButton = getElement("calculateRoute");
     const clearButton = getElement("clearRoute");
-    const destinationSelect = getElement("routeDestination");
 
     if (calculateButton) {
       calculateButton.addEventListener("click", calculateRoute);
@@ -1309,19 +1443,8 @@
       });
     }
 
-    if (destinationSelect) {
-      destinationSelect.addEventListener("change", function () {
-        if (currentRoute) {
-          clearRoute({ showStatus: false });
-
-          showRouteStatus(
-            "Cambiaste el destino. Pulsa «Calcular ruta» para actualizar el recorrido."
-          );
-        }
-      });
-    }
-
-    connectOriginSearch();
+    connectSearch("origin");
+    connectSearch("destination");
   }
 
   // ------------------------------------------------------------
@@ -1409,6 +1532,9 @@
   // ------------------------------------------------------------
 
   function start() {
+    // Convertir el destino antes de conectar sus eventos.
+    prepareDestinationInput();
+
     if (!initializeMap()) return;
 
     connectFilters();
