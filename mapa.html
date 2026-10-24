@@ -50,6 +50,12 @@
       color: inherit;
     }
 
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
     .hero {
       padding: 28px 20px;
       color: white;
@@ -135,6 +141,10 @@
       margin-bottom: 14px;
     }
 
+    .field {
+      min-width: 0;
+    }
+
     .field label {
       display: block;
       margin-bottom: 6px;
@@ -154,6 +164,14 @@
       font-size: 1rem;
     }
 
+    .field input:focus,
+    .field select:focus,
+    button:focus-visible,
+    a:focus-visible {
+      outline: 2px solid var(--gold);
+      outline-offset: 2px;
+    }
+
     .status {
       margin: 12px 0;
       padding: 12px 14px;
@@ -161,6 +179,7 @@
       border-left: 4px solid var(--green-light);
       border-radius: 4px;
       font-size: 0.93rem;
+      overflow-wrap: anywhere;
     }
 
     .map-card {
@@ -232,21 +251,41 @@
       font-weight: bold;
     }
 
-    .footer {
-      padding: 24px 16px;
-      text-align: center;
-      color: #e8eee9;
-      background: var(--green);
-      font-size: 0.88rem;
-    }
-
-    .footer p {
-      margin: 4px;
-    }
-
-    
+    /* Planificador de rutas */
     #routePanel {
       margin-top: 14px;
+    }
+
+    .route-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .route-button {
+      min-height: 44px;
+      padding: 10px 14px;
+      border: 0;
+      border-radius: 7px;
+      background: var(--green);
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .route-button:hover:not(:disabled) {
+      background: var(--green-light);
+    }
+
+    .route-button-secondary {
+      border: 1px solid #c9d0ca;
+      background: white;
+      color: var(--text);
+      font-weight: normal;
+    }
+
+    .route-button-secondary:hover:not(:disabled) {
+      background: #f1f1eb;
     }
 
     #calculateRoute:disabled,
@@ -265,8 +304,8 @@
 
     #routeSummary:not(:empty) {
       padding: 14px;
-      background: #fffdf8;
-      border: 1px solid #e3e1d7;
+      background: var(--paper);
+      border: 1px solid var(--border);
       border-radius: 9px;
     }
 
@@ -277,7 +316,8 @@
 
     .route-summary-detail {
       margin: 4px 0;
-      color: #68766f;
+      color: var(--muted);
+      overflow-wrap: anywhere;
     }
 
     .route-summary-warning {
@@ -286,7 +326,25 @@
       font-size: 0.9rem;
     }
 
-    
+    .route-help {
+      grid-column: 1 / -1;
+      margin: -4px 0 0;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+
+    .footer {
+      padding: 24px 16px;
+      text-align: center;
+      color: #e8eee9;
+      background: var(--green);
+      font-size: 0.88rem;
+    }
+
+    .footer p {
+      margin: 4px;
+    }
+
     @media (max-width: 650px) {
       .hero {
         padding: 23px 16px;
@@ -309,6 +367,10 @@
       #tripMap {
         height: 52vh;
         min-height: 320px;
+      }
+
+      .route-help {
+        grid-column: auto;
       }
     }
   </style>
@@ -333,11 +395,12 @@
       <h2>Explora nuestros destinos</h2>
       <p>
         Consulta los lugares del viaje, filtra por ciudad y selecciona
-        una ubicación para centrar el mapa.
+        una ubicación para centrar el mapa. También puedes calcular
+        recorridos en automóvil o a pie.
       </p>
     </section>
 
-
+    <!-- Filtros del mapa -->
     <section class="filters" aria-label="Filtros del mapa">
       <div class="field">
         <label for="mapCityFilter">Filtrar por ciudad</label>
@@ -357,18 +420,28 @@
       </div>
     </section>
 
-    <section class="filters" id="routePanel" aria-label="Planificador de rutas">
+    <!-- Planificador de rutas -->
+    <section
+      class="filters"
+      id="routePanel"
+      aria-label="Planificador de rutas"
+    >
       <div class="field">
         <label for="routeOrigin">Punto de origen</label>
-        <select id="routeOrigin" disabled>
-          <option value="">Primero carga las ubicaciones</option>
-        </select>
+        <input
+          id="routeOrigin"
+          type="text"
+          list="routeOriginSuggestions"
+          placeholder="Hotel, dirección, estación, plaza…"
+          autocomplete="off"
+        >
+        <datalist id="routeOriginSuggestions"></datalist>
       </div>
 
       <div class="field">
         <label for="routeDestination">Punto de destino</label>
-        <select id="routeDestination" disabled>
-          <option value="">Primero carga las ubicaciones</option>
+        <select id="routeDestination">
+          <option value="">Cargando ubicaciones…</option>
         </select>
       </div>
 
@@ -376,32 +449,53 @@
         <label for="routeMode">Medio de transporte</label>
         <select id="routeMode">
           <option value="driving">Automóvil</option>
+          <option value="walking">A pie</option>
         </select>
       </div>
 
       <div class="field">
-        <label>&nbsp;</label>
-        <div style="display:flex; gap:8px; flex-wrap:wrap">
-          <button type="button" id="calculateRoute"
-            style="min-height:44px; padding:10px 14px; border:0; border-radius:7px; background:#173c35; color:white; font-weight:bold; cursor:pointer">
+        <label>Acciones</label>
+        <div class="route-actions">
+          <button
+            type="button"
+            id="calculateRoute"
+            class="route-button"
+          >
             Calcular ruta
           </button>
-          <button type="button" id="clearRoute"
-            style="min-height:44px; padding:10px 14px; border:1px solid #c9d0ca; border-radius:7px; background:white; color:#25332e; cursor:pointer">
+
+          <button
+            type="button"
+            id="clearRoute"
+            class="route-button route-button-secondary"
+          >
             Limpiar
           </button>
         </div>
       </div>
 
-      <div style="grid-column:1 / -1">
-        <p id="routeStatus" class="status" role="status" aria-live="polite">
-          Selecciona un origen y un destino para calcular la ruta.
+      <p class="route-help">
+        El origen puede ser una ubicación del itinerario o una dirección
+        escrita manualmente. Si escribes una dirección nueva, se buscará
+        en OpenStreetMap. Para coordenadas, escribe latitud y longitud
+        separadas por una coma.
+      </p>
+
+      <div style="grid-column: 1 / -1">
+        <p
+          id="routeStatus"
+          class="status"
+          role="status"
+          aria-live="polite"
+        >
+          Escribe o selecciona un origen, elige un destino y calcula la ruta.
         </p>
+
         <div id="routeSummary" aria-live="polite"></div>
       </div>
     </section>
->
 
+    <!-- Estado general del mapa -->
     <p
       id="mapStatus"
       class="status"
@@ -411,16 +505,19 @@
       Preparando el mapa…
     </p>
 
+    <!-- Mapa -->
     <section class="map-card" aria-label="Mapa interactivo del viaje">
       <div id="tripMap" aria-label="Mapa de ubicaciones del viaje"></div>
+
       <div class="map-note">
         Los marcadores muestran ubicaciones con coordenadas disponibles.
         Los lugares pendientes de confirmar aparecen en la lista.
-        El mapa base requiere conexión a internet.
+        El mapa y el cálculo de rutas requieren conexión a internet.
       </div>
     </section>
 
     <h2 class="list-heading">Lugares del itinerario</h2>
+
     <section
       id="mapLocationList"
       aria-label="Lista de ubicaciones"
