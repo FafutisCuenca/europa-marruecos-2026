@@ -1,4 +1,4 @@
-
+```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -121,7 +121,7 @@
 
     .filters {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+      grid-template-columns: minmax(0, 1fr);
       gap: 14px;
     }
 
@@ -347,17 +347,10 @@
     <section class="panel" aria-labelledby="filtersTitle">
       <h2 id="filtersTitle">Explorar lugares</h2>
       <p class="intro">
-        Filtra los lugares por ciudad o escribe una palabra para encontrarlos.
+        Escribe el nombre de un lugar, una ciudad o una dirección para encontrarlo.
       </p>
 
       <div class="filters">
-        <div class="field">
-          <label for="mapCityFilter">Ciudad</label>
-          <select id="mapCityFilter">
-            <option value="">Todas las ciudades</option>
-          </select>
-        </div>
-
         <div class="field">
           <label for="mapSearch">Buscar un lugar</label>
           <input
@@ -499,3 +492,4 @@
   </script>
 </body>
 </html>
+```
