@@ -5,14 +5,16 @@
  * Funciones:
  * - Mapa interactivo con Leaflet.
  * - Filtros por ciudad y texto.
- * - Lista del itinerario desplegable.
+ * - Búsqueda abierta de lugares con Photon en "Explorar lugares".
  * - Búsqueda libre de origen y destino con Photon.
  * - Búsqueda local en locations.json.
+ * - Selección de resultados sin alterar rutas existentes.
  * - Coordenadas manuales: latitud, longitud.
  * - Rutas en automóvil y a pie.
  * - Resumen compacto de distancia y duración.
  * - Ubicación GPS actual y seguimiento.
- * - Marcador de posición y círculo de precisión.
+ * - Marcador de exploración independiente.
+ * - Marcador GPS y círculo de precisión.
  * - Diagnóstico detallado de errores.
  *
  * Servicios:
@@ -49,16 +51,22 @@
 
     routePlaceholder: "Hotel, dirección, estación, plaza...",
 
-    // Configuración GPS
     gpsEnableHighAccuracy: true,
     gpsMaximumAge: 5000,
     gpsTimeout: 20000,
-    gpsZoom: 16
+    gpsZoom: 16,
+
+    // Zoom al seleccionar un lugar en "Explorar lugares".
+    exploreZoom: 14
   };
 
   let map = null;
   let markerLayer = null;
   let routeLayer = null;
+
+  // Capa independiente para la búsqueda abierta.
+  // No se elimina al actualizar los marcadores del itinerario.
+  let exploreMarker = null;
 
   let allLocations = [];
   let markersById = new Map();
@@ -70,7 +78,7 @@
   let selectedOrigin = null;
   let selectedDestination = null;
 
-  // Estado de geolocalización
+  // Estado de geolocalización.
   let gpsWatchId = null;
   let gpsMarker = null;
   let gpsAccuracyCircle = null;
@@ -80,7 +88,16 @@
   let gpsTrackingActive = false;
   let gpsHasPosition = false;
 
+  // Tres búsquedas independientes: exploración, origen y destino.
   const searches = {
+    explore: {
+      timer: null,
+      controller: null,
+      sequence: 0,
+      panel: null,
+      lastPhotonRequestAt: 0
+    },
+
     origin: {
       timer: null,
       controller: null,
@@ -88,6 +105,7 @@
       panel: null,
       lastPhotonRequestAt: 0
     },
+
     destination: {
       timer: null,
       controller: null,
@@ -109,6 +127,24 @@
 
   function getElement(id) {
     return document.getElementById(id);
+  }
+
+  function getSearchInputId(type) {
+    if (type === "explore") return "mapSearch";
+    if (type === "origin") return "routeOrigin";
+    return "routeDestination";
+  }
+
+  function getSearchPanelId(type) {
+    if (type === "explore") return "mapSearchSuggestionsPanel";
+    if (type === "origin") return "routeOriginSuggestionsPanel";
+    return "routeDestinationSuggestionsPanel";
+  }
+
+  function getSearchLabel(type) {
+    if (type === "explore") return "lugar";
+    if (type === "origin") return "origen";
+    return "destino";
   }
 
   function hasCoordinates(location) {
@@ -221,6 +257,7 @@
 
   function cancelSearch(type) {
     const search = searches[type];
+    if (!search) return;
 
     if (search.timer) {
       clearTimeout(search.timer);
@@ -236,7 +273,7 @@
   }
 
   // ------------------------------------------------------------
-  // ESTILOS COMPACTOS Y ADAPTABLES
+  // ESTILOS
   // ------------------------------------------------------------
 
   function installStyles() {
@@ -246,8 +283,6 @@
     style.id = "tripMapEnhancedStyles";
 
     style.textContent = `
-      /* Sugerencias de origen y destino */
-
       .trip-map-suggestions {
         box-sizing: border-box;
       }
@@ -273,7 +308,12 @@
         outline: none;
       }
 
-      /* Transporte y resumen en columnas */
+      .trip-map-suggestion small {
+        display: block;
+        margin-top: 3px;
+        color: #68756f;
+        font-size: 0.78rem;
+      }
 
       #routeTransportSummary {
         display: grid;
@@ -338,8 +378,6 @@
         line-height: 1.35;
       }
 
-      /* Lista del itinerario */
-
       #mapLocationList[hidden] {
         display: none !important;
       }
@@ -385,8 +423,6 @@
       #mapLocationList .map-pending {
         color: #8a5b20;
       }
-
-      /* Control GPS de Leaflet */
 
       .trip-map-gps-control {
         background: transparent;
@@ -466,8 +502,6 @@
         display: none;
       }
 
-      /* Marcador visual de ubicación actual */
-
       .trip-map-gps-marker {
         display: flex;
         align-items: center;
@@ -487,6 +521,27 @@
         height: 6px;
         border-radius: 50%;
         background: #ffffff;
+      }
+
+      .trip-map-explore-marker {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        border: 3px solid #ffffff;
+        border-radius: 50% 50% 50% 0;
+        background: #bd9656;
+        box-shadow: 0 2px 8px #00000044;
+        transform: rotate(-45deg);
+        box-sizing: border-box;
+      }
+
+      .trip-map-explore-marker span {
+        color: #ffffff;
+        font-size: 17px;
+        font-weight: 700;
+        transform: rotate(45deg);
       }
 
       @media (max-width: 620px) {
@@ -563,8 +618,21 @@
     existing.replaceWith(input);
   }
 
+  function prepareExploreInput() {
+    const input = getElement("mapSearch");
+    if (!input) return;
+
+    input.type = "search";
+    input.autocomplete = "off";
+    input.setAttribute("aria-autocomplete", "list");
+    input.setAttribute(
+      "aria-label",
+      "Buscar una ciudad, dirección o punto de interés"
+    );
+  }
+
   // ------------------------------------------------------------
-  // PRESENTACIÓN COMPACTA DEL TRANSPORTE Y LA RUTA
+  // PRESENTACIÓN COMPACTA DE LA RUTA
   // ------------------------------------------------------------
 
   function prepareCompactRouteLayout() {
@@ -610,43 +678,27 @@
   }
 
   // ------------------------------------------------------------
-  // LISTA DEL ITINERARIO MOSTRAR / OCULTAR
+  // LISTA DEL ITINERARIO
   // ------------------------------------------------------------
 
   function prepareLocationListToggle() {
     const list = getElement("mapLocationList");
     if (!list) return;
 
-    const button = getElement("toggleItineraryLocations");
+    // El HTML ya tiene su propio controlador para #toggleItinerary.
+    // Aquí solo establecemos el estado inicial, evitando registrar
+    // un segundo evento de clic que interfiera con el controlador HTML.
+    const button =
+      getElement("toggleItinerary") ||
+      getElement("toggleItineraryLocations");
 
     state.locationListExpanded = false;
     list.hidden = true;
 
-    if (!button) {
-      console.warn(
-        "No se encontró el control #toggleItineraryLocations."
-      );
-      return;
+    if (button) {
+      button.setAttribute("aria-controls", "mapLocationList");
+      button.setAttribute("aria-expanded", "false");
     }
-
-    button.setAttribute("aria-controls", "mapLocationList");
-    button.setAttribute("aria-expanded", "false");
-
-    if (button.dataset.toggleInitialized === "true") return;
-
-    button.dataset.toggleInitialized = "true";
-
-    button.addEventListener("click", function (event) {
-      event.preventDefault();
-
-      state.locationListExpanded = !state.locationListExpanded;
-      list.hidden = !state.locationListExpanded;
-
-      button.setAttribute(
-        "aria-expanded",
-        String(state.locationListExpanded)
-      );
-    });
   }
 
   function updateLocationListToggle() {
@@ -655,7 +707,9 @@
 
     list.hidden = !state.locationListExpanded;
 
-    const button = getElement("toggleItineraryLocations");
+    const button =
+      getElement("toggleItinerary") ||
+      getElement("toggleItineraryLocations");
 
     if (button) {
       button.setAttribute(
@@ -666,7 +720,7 @@
   }
 
   // ------------------------------------------------------------
-  // GPS: CONTROL DENTRO DEL MAPA LEAFLET
+  // GPS
   // ------------------------------------------------------------
 
   function updateGpsControl(message) {
@@ -696,8 +750,7 @@
   }
 
   function createGpsControl() {
-    if (!map || typeof L === "undefined") return;
-    if (gpsControl) return;
+    if (!map || typeof L === "undefined" || gpsControl) return;
 
     gpsControl = L.control({ position: "topright" });
 
@@ -732,7 +785,6 @@
       gpsButton = button;
       gpsStatus = status;
 
-      // Evitar que los clics del control muevan el mapa.
       L.DomEvent.disableClickPropagation(container);
       L.DomEvent.disableScrollPropagation(container);
 
@@ -771,9 +823,7 @@
         title: "Mi ubicación actual"
       });
 
-      gpsMarker.bindPopup(
-        "<strong>Mi ubicación actual</strong>"
-      );
+      gpsMarker.bindPopup("<strong>Mi ubicación actual</strong>");
     }
 
     if (!gpsAccuracyCircle) {
@@ -810,9 +860,7 @@
       "Solicitando permiso y ubicación al dispositivo…"
     );
 
-    if (gpsButton) {
-      gpsButton.disabled = true;
-    }
+    if (gpsButton) gpsButton.disabled = true;
 
     createGpsMarker();
 
@@ -830,9 +878,7 @@
       gpsTrackingActive = false;
       gpsWatchId = null;
 
-      if (gpsButton) {
-        gpsButton.disabled = false;
-      }
+      if (gpsButton) gpsButton.disabled = false;
 
       updateGpsControl(
         "No fue posible iniciar el GPS. Inténtalo nuevamente."
@@ -849,12 +895,7 @@
     const longitude = Number(position.coords.longitude);
     const accuracy = Number(position.coords.accuracy);
 
-    const point = {
-      latitude,
-      longitude
-    };
-
-    if (!hasCoordinates(point)) {
+    if (!hasCoordinates({ latitude, longitude })) {
       updateGpsControl(
         "El dispositivo devolvió coordenadas no válidas."
       );
@@ -893,19 +934,14 @@
       `Ubicación actualizada. ${accuracyText}`
     );
 
-    if (gpsButton) {
-      gpsButton.disabled = false;
-    }
+    if (gpsButton) gpsButton.disabled = false;
 
-    // Centrar el mapa en la posición actual.
-    // Se hace con cada actualización mientras el seguimiento está activo.
     map.setView(
       latLng,
       Math.max(map.getZoom(), CONFIG.gpsZoom),
       { animate: true }
     );
 
-    // Actualizar el contenido del marcador.
     const timestamp = position.timestamp
       ? new Date(position.timestamp).toLocaleTimeString("es-MX")
       : "";
@@ -954,18 +990,12 @@
 
     updateGpsControl(message);
 
-    if (gpsButton) {
-      gpsButton.disabled = false;
-    }
+    if (gpsButton) gpsButton.disabled = false;
 
     console.warn("Aviso de geolocalización:", {
       code: error.code,
       message: error.message
     });
-
-    // Si todavía no se obtuvo ninguna posición, dejamos el control
-    // activo para permitir que el navegador vuelva a intentarlo.
-    // El usuario puede detenerlo manualmente.
   }
 
   function stopLocationTracking() {
@@ -976,8 +1006,6 @@
       gpsWatchId = null;
     }
 
-    // Retirar los elementos GPS del mapa.
-    // Los marcadores y las rutas del itinerario no se modifican.
     if (map && gpsMarker && map.hasLayer(gpsMarker)) {
       map.removeLayer(gpsMarker);
     }
@@ -992,9 +1020,7 @@
 
     gpsHasPosition = false;
 
-    if (gpsButton) {
-      gpsButton.disabled = false;
-    }
+    if (gpsButton) gpsButton.disabled = false;
 
     updateGpsControl("Seguimiento detenido.");
   }
@@ -1037,14 +1063,13 @@
     markerLayer = L.layerGroup().addTo(map);
     routeLayer = L.layerGroup().addTo(map);
 
-    // Agregar el control GPS en la esquina superior derecha.
     createGpsControl();
 
     return true;
   }
 
   // ------------------------------------------------------------
-  // FILTROS Y MARCADORES
+  // FILTROS Y MARCADORES DEL ITINERARIO
   // ------------------------------------------------------------
 
   function renderCityOptions() {
@@ -1126,7 +1151,7 @@
         padding: [30, 30],
         maxZoom: 13
       });
-    } else {
+    } else if (!exploreMarker) {
       map.setView(CONFIG.defaultCenter, CONFIG.defaultZoom);
     }
 
@@ -1211,6 +1236,9 @@
     }
 
     if (searchInput) {
+      // El campo cumple dos funciones compatibles:
+      // 1. Filtra los lugares locales.
+      // 2. Ofrece sugerencias de búsqueda geográfica abierta.
       searchInput.addEventListener("input", function () {
         state.search = searchInput.value;
         renderMarkers();
@@ -1255,22 +1283,83 @@
   }
 
   // ------------------------------------------------------------
+  // MARCADOR DE EXPLORACIÓN INDEPENDIENTE
+  // ------------------------------------------------------------
+
+  function showExploreLocation(location) {
+    if (!map || !hasCoordinates(location)) return false;
+
+    const point = {
+      ...location,
+      latitude: Number(location.latitude),
+      longitude: Number(location.longitude)
+    };
+
+    const icon = L.divIcon({
+      className: "",
+      html: '<div class="trip-map-explore-marker"><span>⌖</span></div>',
+      iconSize: [34, 34],
+      iconAnchor: [17, 34],
+      popupAnchor: [0, -32]
+    });
+
+    if (exploreMarker) {
+      map.removeLayer(exploreMarker);
+      exploreMarker = null;
+    }
+
+    exploreMarker = L.marker(
+      [point.latitude, point.longitude],
+      {
+        icon,
+        zIndexOffset: 8000,
+        keyboard: true,
+        title: point.name || "Lugar explorado"
+      }
+    );
+
+    const popupContent = `
+      <div class="trip-map-popup">
+        <strong>${escapeHtml(point.name || "Lugar explorado")}</strong>
+        <div>${escapeHtml(getLocationDescription(point))}</div>
+        <small>
+          ${escapeHtml(point.source === "itinerary"
+            ? "Lugar del itinerario"
+            : "Resultado de búsqueda")}
+        </small>
+      </div>
+    `;
+
+    exploreMarker
+      .bindPopup(popupContent)
+      .addTo(map);
+
+    map.setView(
+      [point.latitude, point.longitude],
+      Math.max(map.getZoom(), CONFIG.exploreZoom),
+      { animate: true }
+    );
+
+    exploreMarker.openPopup();
+
+    showStatus(
+      `Lugar localizado: ${getLocationLabel(point)}. El itinerario y las rutas no se han modificado.`
+    );
+
+    return true;
+  }
+
+  // ------------------------------------------------------------
   // PANELES DE SUGERENCIAS
   // ------------------------------------------------------------
 
   function ensureSuggestionPanel(type) {
-    const input = getElement(
-      type === "origin" ? "routeOrigin" : "routeDestination"
-    );
+    const input = getElement(getSearchInputId(type));
 
     if (!input || searches[type].panel) return;
 
     const panel = document.createElement("div");
-
-    panel.id = type === "origin"
-      ? "routeOriginSuggestionsPanel"
-      : "routeDestinationSuggestionsPanel";
-
+    panel.id = getSearchPanelId(type);
     panel.className = "trip-map-suggestions";
     panel.setAttribute("role", "listbox");
 
@@ -1313,7 +1402,7 @@
   }
 
   function hideSuggestions(type) {
-    const panel = searches[type].panel;
+    const panel = searches[type]?.panel;
 
     if (panel) {
       panel.style.display = "none";
@@ -1374,9 +1463,7 @@
   }
 
   function chooseSearchResult(type, item) {
-    const input = getElement(
-      type === "origin" ? "routeOrigin" : "routeDestination"
-    );
+    const input = getElement(getSearchInputId(type));
 
     if (!input || !hasCoordinates(item)) return;
 
@@ -1386,15 +1473,21 @@
       longitude: Number(item.longitude)
     };
 
+    input.value = chosen.label || getLocationLabel(chosen);
+    hideSuggestions(type);
+
+    // La exploración es independiente de las rutas.
+    // No cambia selectedOrigin, selectedDestination ni currentRoute.
+    if (type === "explore") {
+      showExploreLocation(chosen);
+      return;
+    }
+
     if (type === "origin") {
       selectedOrigin = chosen;
     } else {
       selectedDestination = chosen;
     }
-
-    input.value = chosen.label || getLocationLabel(chosen);
-
-    hideSuggestions(type);
 
     if (currentRoute) {
       clearRoute({ showStatus: false });
@@ -1446,14 +1539,13 @@
   // ------------------------------------------------------------
 
   function getPhotonCoordinates(feature) {
-    const coordinates =
-      feature?.geometry?.coordinates;
+    const coordinates = feature?.geometry?.coordinates;
 
     if (!Array.isArray(coordinates) || coordinates.length < 2) {
       return null;
     }
 
-    // GeoJSON: [longitud, latitud].
+    // GeoJSON utiliza [longitud, latitud].
     const longitude = Number(coordinates[0]);
     const latitude = Number(coordinates[1]);
 
@@ -1469,7 +1561,6 @@
     const properties = feature.properties || {};
 
     const name = properties.name || properties.street;
-
     if (!name) return null;
 
     const city =
@@ -1481,7 +1572,10 @@
 
     const country = properties.country || "";
 
-    const label = [name, [city, country].filter(Boolean).join(", ")]
+    const label = [
+      name,
+      [city, country].filter(Boolean).join(", ")
+    ]
       .filter(Boolean)
       .join(" — ");
 
@@ -1520,7 +1614,10 @@
 
     if (elapsed < CONFIG.photonMinimumInterval) {
       await new Promise(resolve =>
-        setTimeout(resolve, CONFIG.photonMinimumInterval - elapsed)
+        setTimeout(
+          resolve,
+          CONFIG.photonMinimumInterval - elapsed
+        )
       );
     }
 
@@ -1593,7 +1690,7 @@
   }
 
   // ------------------------------------------------------------
-  // BÚSQUEDA EN ORIGEN Y DESTINO
+  // BÚSQUEDA COMBINADA: ITINERARIO + PHOTON
   // ------------------------------------------------------------
 
   async function performSearch(type, query, sequence) {
@@ -1639,7 +1736,6 @@
       );
     } catch (error) {
       if (error.name === "AbortError") return;
-
       if (sequence !== searches[type].sequence) return;
 
       console.error("Error en la búsqueda geográfica:", {
@@ -1665,32 +1761,42 @@
     }
   }
 
-  function connectSearch(type) {
-    const input = getElement(
-      type === "origin" ? "routeOrigin" : "routeDestination"
-    );
+  // ------------------------------------------------------------
+  // CONEXIÓN DE LOS TRES CAMPOS DE BÚSQUEDA
+  // ------------------------------------------------------------
 
+  function connectSearch(type) {
+    const input = getElement(getSearchInputId(type));
     if (!input) return;
 
     ensureSuggestionPanel(type);
 
-    input.placeholder = CONFIG.routePlaceholder;
+    if (type !== "explore") {
+      input.placeholder = CONFIG.routePlaceholder;
+    }
+
     input.autocomplete = "off";
 
     input.addEventListener("input", function () {
       if (type === "origin") {
         selectedOrigin = null;
-      } else {
+      } else if (type === "destination") {
         selectedDestination = null;
       }
 
-      if (currentRoute) {
+      // Escribir en los campos de ruta conserva el comportamiento anterior:
+      // invalida la selección correspondiente y elimina la ruta anterior.
+      // Escribir en "Explorar lugares" no modifica las rutas.
+      if (type !== "explore" && currentRoute) {
         clearRoute({ showStatus: false });
       }
 
       const search = searches[type];
 
-      if (search.timer) clearTimeout(search.timer);
+      if (search.timer) {
+        clearTimeout(search.timer);
+        search.timer = null;
+      }
 
       if (search.controller) {
         search.controller.abort();
@@ -1831,8 +1937,11 @@
 
     if (coordinates) {
       const result = {
-        name: isOrigin ? "Origen por coordenadas" : "Destino por coordenadas",
-        label: `Coordenadas: ${coordinates.latitude}, ${coordinates.longitude}`,
+        name: isOrigin
+          ? "Origen por coordenadas"
+          : "Destino por coordenadas",
+        label:
+          `Coordenadas: ${coordinates.latitude}, ${coordinates.longitude}`,
         latitude: coordinates.latitude,
         longitude: coordinates.longitude,
         source: "coordinates"
@@ -1914,7 +2023,7 @@
   }
 
   // ------------------------------------------------------------
-  // CONTROLES DEL FORMULARIO
+  // CONTROLES DEL FORMULARIO DE RUTA
   // ------------------------------------------------------------
 
   function populateRouteSelectors() {
@@ -2138,7 +2247,7 @@
         response = await fetch(url, {
           headers: { Accept: "application/json" }
         });
-      } catch (error) {
+      } catch {
         throw new Error(
           "No se pudo conectar con el servicio de rutas. Comprueba tu conexión e inténtalo de nuevo."
         );
@@ -2275,6 +2384,9 @@
 
     connectSearch("origin");
     connectSearch("destination");
+
+    // Nueva búsqueda abierta, independiente de las rutas.
+    connectSearch("explore");
   }
 
   // ------------------------------------------------------------
@@ -2362,6 +2474,7 @@
 
     prepareOriginInput();
     prepareDestinationInput();
+    prepareExploreInput();
 
     prepareCompactRouteLayout();
     prepareLocationListToggle();
@@ -2378,6 +2491,7 @@
     start,
     refresh: loadLocations,
     showLocation,
+    showExploreLocation,
     calculateRoute,
     clearRoute,
 
