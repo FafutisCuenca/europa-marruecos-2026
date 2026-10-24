@@ -496,7 +496,8 @@
     summary.hidden = true;
   }
 
-    // ------------------------------------------------------------
+
+  // ------------------------------------------------------------
   // LISTA DEL ITINERARIO MOSTRAR / OCULTAR
   // ------------------------------------------------------------
 
@@ -504,54 +505,63 @@
     const list = getElement("mapLocationList");
     if (!list) return;
 
-    // Buscar el control existente en el HTML.
+    // Utilizar el control existente en map.html.
     // No crear un botón adicional.
     const button = getElement("toggleItineraryLocations");
 
-    // Si el control existente no tiene este ID, no hacemos nada aquí.
+    // Ocultar la lista al iniciar.
+    state.locationListExpanded = false;
+    list.hidden = true;
+
     if (!button) {
-      list.hidden = false;
+      console.warn(
+        "No se encontró el control #toggleItineraryLocations. " +
+        "Verifica el identificador de la cajita en map.html."
+      );
       return;
     }
 
     button.setAttribute("aria-controls", "mapLocationList");
+    button.setAttribute("aria-expanded", "false");
 
-    state.locationListExpanded = false;
-    list.hidden = true;
-
-    updateLocationListToggle();
-
-    // Evitar registrar varias veces el evento.
+    // Evitar registrar el evento más de una vez.
     if (button.dataset.toggleInitialized === "true") return;
 
     button.dataset.toggleInitialized = "true";
 
-    button.addEventListener("click", function () {
+    button.addEventListener("click", function (event) {
+      event.preventDefault();
+
       state.locationListExpanded = !state.locationListExpanded;
 
       list.hidden = !state.locationListExpanded;
 
-      updateLocationListToggle();
+      button.setAttribute(
+        "aria-expanded",
+        String(state.locationListExpanded)
+      );
     });
   }
 
   function updateLocationListToggle() {
-    const button = getElement("toggleItineraryLocations");
     const list = getElement("mapLocationList");
+    if (!list) return;
 
-    if (!button || !list) return;
-
+    // Actualizar la visibilidad sin alterar el texto ni el diseño
+    // del control original.
     list.hidden = !state.locationListExpanded;
 
-    button.setAttribute(
-      "aria-expanded",
-      String(state.locationListExpanded)
-    );
+    const button = getElement("toggleItineraryLocations");
 
-    button.textContent = state.locationListExpanded
-      ? "Ocultar lugares del itinerario ▲"
-      : "Ver todos los lugares del itinerario ▼";
+    if (button) {
+      button.setAttribute(
+        "aria-expanded",
+        String(state.locationListExpanded)
+      );
+    }
   }
+
+  
   // ------------------------------------------------------------
   // MAPA LEAFLET
   // ------------------------------------------------------------
