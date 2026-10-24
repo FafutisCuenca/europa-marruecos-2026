@@ -1,0 +1,738 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <meta
+    name="description"
+    content="Portal de viaje Europa y Marruecos 2026: itinerario, destinos y mapa."
+  >
+  <meta name="theme-color" content="#173c35">
+
+  <title>Europa + Marruecos 2026 | Nuestro viaje</title>
+
+  <style>
+    :root {
+      --green: #173c35;
+      --green-light: #28594d;
+      --cream: #f7f4ec;
+      --paper: #fffdf8;
+      --gold: #bd9656;
+      --text: #25332e;
+      --muted: #68766f;
+      --border: #e3e1d7;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      background: var(--cream);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.6;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: 54px 22px 48px;
+      color: white;
+      background:
+        radial-gradient(
+          circle at 85% 20%,
+          #bd965633 0,
+          transparent 32%
+        ),
+        linear-gradient(135deg, #173c35, #244c42);
+      border-bottom: 5px solid var(--gold);
+    }
+
+    .hero-inner,
+    main,
+    .footer-inner {
+      width: min(1100px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    .eyebrow {
+      margin: 0 0 12px;
+      color: #e7d4ae;
+      font-size: 0.78rem;
+      font-weight: bold;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2,
+    h3 {
+      font-family: Georgia, "Times New Roman", serif;
+      line-height: 1.2;
+    }
+
+    h1 {
+      max-width: 760px;
+      margin: 0;
+      font-size: clamp(2.4rem, 7vw, 4.7rem);
+      font-weight: normal;
+      letter-spacing: -0.035em;
+    }
+
+    .hero-description {
+      max-width: 650px;
+      margin: 20px 0 0;
+      color: #e8eee9;
+      font-size: clamp(1rem, 2vw, 1.15rem);
+    }
+
+    .date-pill {
+      display: inline-block;
+      margin-top: 22px;
+      padding: 8px 13px;
+      border: 1px solid #9daea4;
+      border-radius: 6px;
+      font-size: 0.93rem;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 28px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 45px;
+      padding: 11px 17px;
+      border: 1px solid var(--gold);
+      border-radius: 7px;
+      color: var(--green);
+      background: #e5c995;
+      font-size: 0.95rem;
+      font-weight: bold;
+      text-decoration: none;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    .button:hover,
+    .button:focus-visible {
+      filter: brightness(0.95);
+    }
+
+    .button-outline {
+      color: white;
+      background: transparent;
+      border-color: #9daea4;
+    }
+
+    main {
+      padding-top: 32px;
+      padding-bottom: 46px;
+    }
+
+    .section {
+      margin-bottom: 34px;
+    }
+
+    .section-heading {
+      margin: 0 0 8px;
+      font-size: clamp(1.65rem, 4vw, 2.15rem);
+      font-weight: normal;
+    }
+
+    .section-description {
+      margin: 0 0 20px;
+      color: var(--muted);
+    }
+
+    .overview {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 34px;
+    }
+
+    .overview-card {
+      padding: 18px;
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+
+    .overview-number {
+      display: block;
+      color: var(--green);
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 1.8rem;
+    }
+
+    .overview-label {
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .destination-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .destination {
+      display: flex;
+      flex-direction: column;
+      min-height: 190px;
+      padding: 19px;
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+
+    .destination-number {
+      color: var(--gold);
+      font-size: 0.8rem;
+      font-weight: bold;
+      letter-spacing: 0.12em;
+    }
+
+    .destination h3 {
+      margin: 12px 0 8px;
+      font-size: 1.35rem;
+      font-weight: normal;
+    }
+
+    .destination p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .destination a {
+      margin-top: auto;
+      padding-top: 15px;
+      color: var(--green);
+      font-size: 0.9rem;
+      font-weight: bold;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 4px;
+    }
+
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .feature {
+      padding: 22px;
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+
+    .feature-symbol {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      margin-bottom: 12px;
+      border-radius: 50%;
+      color: var(--green);
+      background: #e8ede5;
+      font-size: 1.25rem;
+    }
+
+    .feature h3 {
+      margin: 0 0 8px;
+      font-size: 1.4rem;
+      font-weight: normal;
+    }
+
+    .feature p {
+      margin: 0 0 17px;
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+
+    .feature .button {
+      width: 100%;
+      background: var(--green);
+      border-color: var(--green);
+      color: white;
+    }
+
+    .feature .button:hover {
+      background: var(--green-light);
+    }
+
+    .status {
+      margin: 12px 0;
+      padding: 12px 14px;
+      background: #e9eee7;
+      border-left: 4px solid var(--green-light);
+      border-radius: 4px;
+      font-size: 0.92rem;
+      overflow-wrap: anywhere;
+    }
+
+    .day-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .day-card {
+      padding: 17px;
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+    }
+
+    .day-card h3 {
+      margin: 0 0 5px;
+      font-size: 1.2rem;
+      font-weight: normal;
+    }
+
+    .day-card p {
+      margin: 5px 0;
+      color: var(--muted);
+      font-size: 0.93rem;
+    }
+
+    .day-card a {
+      display: inline-block;
+      margin-top: 8px;
+      color: var(--green);
+      font-weight: bold;
+      text-underline-offset: 4px;
+    }
+
+    .empty-state {
+      padding: 18px;
+      color: var(--muted);
+      background: var(--paper);
+      border: 1px dashed #c9cbbf;
+      border-radius: 9px;
+    }
+
+    .footer {
+      padding: 27px 16px;
+      color: #e8eee9;
+      background: var(--green);
+      text-align: center;
+      font-size: 0.88rem;
+    }
+
+    .footer p {
+      margin: 4px 0;
+    }
+
+    @media (max-width: 800px) {
+      .destination-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .overview {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 520px) {
+      .hero {
+        padding: 38px 0;
+      }
+
+      .hero-inner,
+      main,
+      .footer-inner {
+        width: calc(100% - 24px);
+      }
+
+      .overview {
+        gap: 7px;
+      }
+
+      .overview-card {
+        padding: 12px 9px;
+      }
+
+      .overview-number {
+        font-size: 1.4rem;
+      }
+
+      .overview-label {
+        font-size: 0.75rem;
+      }
+
+      .destination-grid,
+      .feature-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .destination {
+        min-height: 155px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <p class="eyebrow">Nuestro diario de viaje · 2026</p>
+
+      <h1>Europa +<br>Marruecos</h1>
+
+      <p class="hero-description">
+        Una aventura entre ciudades históricas, arquitectura,
+        cultura mediterránea y los paisajes del desierto del Sahara.
+      </p>
+
+      <div class="date-pill">
+        29 de octubre — 14 de noviembre de 2026
+      </div>
+
+      <div class="hero-actions">
+        <a class="button" href="#destinos">Explorar destinos</a>
+        <a class="button button-outline" href="./mapa.html">
+          Abrir mapa del viaje
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="overview" aria-label="Resumen del viaje">
+      <div class="overview-card">
+        <span class="overview-number">17</span>
+        <span class="overview-label">Días de viaje</span>
+      </div>
+
+      <div class="overview-card">
+        <span class="overview-number">4</span>
+        <span class="overview-label">Destinos principales</span>
+      </div>
+
+      <div class="overview-card">
+        <span class="overview-number">2</span>
+        <span class="overview-label">Países</span>
+      </div>
+    </section>
+
+    <section class="section" id="destinos">
+      <h2 class="section-heading">Nuestros destinos</h2>
+      <p class="section-description">
+        De las grandes avenidas de España a los colores y paisajes de Marruecos.
+      </p>
+
+      <div class="destination-grid">
+        <article class="destination">
+          <span class="destination-number">01 · ESPAÑA</span>
+          <h3>Madrid</h3>
+          <p>
+            Plazas históricas, palacios, museos, barrios tradicionales
+            y vida nocturna.
+          </p>
+          <a href="./mapa.html?city=Madrid">Explorar en el mapa →</a>
+        </article>
+
+        <article class="destination">
+          <span class="destination-number">02 · ESPAÑA</span>
+          <h3>Barcelona</h3>
+          <p>
+            Arquitectura modernista, barrios históricos,
+            parques y costa mediterránea.
+          </p>
+          <a href="./mapa.html?city=Barcelona">Explorar en el mapa →</a>
+        </article>
+
+        <article class="destination">
+          <span class="destination-number">03 · MARRUECOS</span>
+          <h3>Marrakech</h3>
+          <p>
+            Jardines, mercados, plazas, cultura local
+            y arquitectura marroquí.
+          </p>
+          <a href="./mapa.html?city=Marrakech">Explorar en el mapa →</a>
+        </article>
+
+        <article class="destination">
+          <span class="destination-number">04 · MARRUECOS</span>
+          <h3>Sahara</h3>
+          <p>
+            Ruta por paisajes del Atlas, kasbahs,
+            gargantas y experiencia en el desierto.
+          </p>
+          <a href="./mapa.html?city=Sahara">Explorar en el mapa →</a>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="section-heading">Organiza tu viaje</h2>
+      <p class="section-description">
+        Accede a las herramientas principales desde el teléfono.
+      </p>
+
+      <div class="feature-grid">
+        <article class="feature">
+          <div class="feature-symbol" aria-hidden="true">☷</div>
+          <h3>Itinerario diario</h3>
+          <p>
+            Consulta los días, actividades, visitas y traslados
+            definidos para el recorrido.
+          </p>
+          <a class="button" href="#itinerario">
+            Consultar itinerario
+          </a>
+        </article>
+
+        <article class="feature">
+          <div class="feature-symbol" aria-hidden="true">⌖</div>
+          <h3>Mapa interactivo</h3>
+          <p>
+            Localiza los lugares del viaje, filtra por ciudad
+            y abre las ubicaciones disponibles.
+          </p>
+          <a class="button" href="./mapa.html">
+            Abrir mapa
+          </a>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="itinerario">
+      <h2 class="section-heading">Vista previa del itinerario</h2>
+      <p class="section-description">
+        Esta sección se alimenta de los datos del archivo
+        <code>data/itinerary.json</code>.
+      </p>
+
+      <p id="itineraryStatus" class="status" role="status" aria-live="polite">
+        Cargando itinerario…
+      </p>
+
+      <div id="dayList" class="day-list">
+        <div class="empty-state">
+          Preparando la información del viaje…
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="section-heading">Información importante</h2>
+      <p class="section-description">
+        En las siguientes etapas incorporaremos datos útiles para
+        consultar durante el recorrido.
+      </p>
+
+      <div class="feature-grid">
+        <article class="feature">
+          <h3>Datos esenciales</h3>
+          <p>
+            Prepararemos una sección con alojamientos, transportes,
+            direcciones y referencias de las reservas confirmadas.
+          </p>
+        </article>
+
+        <article class="feature">
+          <h3>Consulta desde el móvil</h3>
+          <p>
+            La estructura permitirá preparar una versión instalable
+            y conservar información del itinerario para consultarla
+            sin conexión, una vez implementada y probada.
+          </p>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+      <p><strong>Europa + Marruecos 2026</strong></p>
+      <p>29 de octubre al 14 de noviembre de 2026</p>
+      <p>Tu viaje, organizado en un solo lugar.</p>
+    </div>
+  </footer>
+
+  <script>
+    "use strict";
+
+    const itineraryStatus = document.getElementById("itineraryStatus");
+    const dayList = document.getElementById("dayList");
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, function (char) {
+        return {
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;"
+        }[char];
+      });
+    }
+
+    function getDays(data) {
+      if (Array.isArray(data)) {
+        return data;
+      }
+
+      if (Array.isArray(data.days)) {
+        return data.days;
+      }
+
+      if (data.itinerary && Array.isArray(data.itinerary.days)) {
+        return data.itinerary.days;
+      }
+
+      if (Array.isArray(data.itinerary)) {
+        return data.itinerary;
+      }
+
+      return [];
+    }
+
+    function getDayTitle(day, index) {
+      return day.title ||
+        day.name ||
+        day.city ||
+        day.destination ||
+        `Día ${day.day ?? day.number ?? index + 1}`;
+    }
+
+    function getDayDate(day) {
+      return day.date ||
+        day.startDate ||
+        day.fecha ||
+        "";
+    }
+
+    function getDayDescription(day) {
+      const description =
+        day.description ||
+        day.summary ||
+        day.notes ||
+        "";
+
+      if (typeof description === "string") {
+        return description;
+      }
+
+      return "";
+    }
+
+    function renderDays(days) {
+      if (days.length === 0) {
+        itineraryStatus.textContent =
+          "El archivo se pudo leer, pero no se encontró una lista de días reconocible.";
+
+        dayList.innerHTML = `
+          <div class="empty-state">
+            Revisa que data/itinerary.json contenga los días del viaje.
+            En el siguiente paso podemos adaptar esta vista a su estructura exacta.
+          </div>
+        `;
+
+        return;
+      }
+
+      itineraryStatus.textContent =
+        `Se encontraron ${days.length} registros de itinerario.`;
+
+      dayList.innerHTML = days.map((day, index) => {
+        const title = escapeHtml(getDayTitle(day, index));
+        const date = escapeHtml(getDayDate(day));
+        const description = escapeHtml(getDayDescription(day));
+
+        const activitySource =
+          Array.isArray(day.activities) ? day.activities :
+          Array.isArray(day.events) ? day.events :
+          [];
+
+        const activityNames = activitySource
+          .slice(0, 4)
+          .map(activity => {
+            if (typeof activity === "string") {
+              return activity;
+            }
+
+            return activity.title ||
+              activity.name ||
+              activity.activity ||
+              activity.description ||
+              "";
+          })
+          .filter(Boolean);
+
+        const activityHtml = activityNames.length
+          ? `<p>${activityNames.map(escapeHtml).join(" · ")}</p>`
+          : "";
+
+        const mapLink = day.city
+          ? `<a href="./mapa.html?city=${encodeURIComponent(day.city)}">Ver ciudad en el mapa →</a>`
+          : "";
+
+        return `
+          <article class="day-card">
+            <h3>${date ? `${date} · ` : ""}${title}</h3>
+            ${description ? `<p>${description}</p>` : ""}
+            ${activityHtml}
+            ${mapLink}
+          </article>
+        `;
+      }).join("");
+    }
+
+    async function loadItinerary() {
+      try {
+        const response = await fetch("./data/itinerary.json", {
+          cache: "no-cache"
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        const days = getDays(data);
+
+        renderDays(days);
+      } catch (error) {
+        console.error("No se pudo cargar el itinerario:", error);
+
+        itineraryStatus.textContent =
+          "No se pudo cargar data/itinerary.json.";
+
+        dayList.innerHTML = `
+          <div class="empty-state">
+            Verifica que exista data/itinerary.json, que la ruta sea correcta
+            y que el archivo contenga JSON válido.
+            Si acabas de guardar cambios, espera a que GitHub Pages se actualice
+            y vuelve a cargar esta página.
+          </div>
+        `;
+      }
+    }
+
+    loadItinerary();
+  </script>
+</body>
+</html>
