@@ -639,67 +639,92 @@
       return "";
     }
 
-    function renderDays(days) {
-      if (days.length === 0) {
-        itineraryStatus.textContent =
-          "El archivo se pudo leer, pero no se encontró una lista de días reconocible.";
+    
+function renderDays(days) {
+  if (days.length === 0) {
+    itineraryStatus.textContent =
+      "El archivo se pudo leer, pero no se encontró una lista de días reconocible.";
 
-        dayList.innerHTML = `
-          <div class="empty-state">
-            Revisa que data/itinerary.json contenga los días del viaje.
-            En el siguiente paso podemos adaptar esta vista a su estructura exacta.
-          </div>
-        `;
+    dayList.innerHTML = `
+      <div class="empty-state">
+        Revisa que data/itinerary.json contenga los días del viaje.
+      </div>
+    `;
+    return;
+  }
 
-        return;
-      }
+  itineraryStatus.textContent =
+    `Se encontraron ${days.length} registros de itinerario.`;
 
-      itineraryStatus.textContent =
-        `Se encontraron ${days.length} registros de itinerario.`;
+  dayList.innerHTML = days.map((day, index) => {
+    const title = escapeHtml(getDayTitle(day, index));
+    const date = escapeHtml(getDayDate(day));
+    const description = escapeHtml(getDayDescription(day));
 
-      dayList.innerHTML = days.map((day, index) => {
-        const title = escapeHtml(getDayTitle(day, index));
-        const date = escapeHtml(getDayDate(day));
-        const description = escapeHtml(getDayDescription(day));
+    const activities = Array.isArray(day.activities)
+      ? day.activities
+      : Array.isArray(day.events)
+        ? day.events
+        : [];
 
-        const activitySource =
-          Array.isArray(day.activities) ? day.activities :
-          Array.isArray(day.events) ? day.events :
-          [];
-
-        const activityNames = activitySource
-          .slice(0, 4)
-          .map(activity => {
+    const activityHtml = activities.length
+      ? `
+        <ul class="activity-list">
+          ${activities.map(activity => {
             if (typeof activity === "string") {
-              return activity;
+              return `<li>${escapeHtml(activity)}</li>`;
             }
 
-            return activity.title ||
+            const activityName =
+              activity.title ||
               activity.name ||
               activity.activity ||
               activity.description ||
-              "";
-          })
-          .filter(Boolean);
+              "Actividad";
 
-        const activityHtml = activityNames.length
-          ? `<p>${activityNames.map(escapeHtml).join(" · ")}</p>`
-          : "";
+            const locationId = activity.locationId;
 
-        const mapLink = day.city
-          ? `<a href="./mapa.html?city=${encodeURIComponent(day.city)}">Ver ciudad en el mapa →</a>`
-          : "";
+            const locationLink =
+              typeof locationId === "string" && locationId.trim()
+                ? `
+                  <a
+                    class="activity-map-link"
+                    href="./mapa.html?location=${encodeURIComponent(locationId)}"
+                  >Ver ubicación en el mapa →</a>
+                `
+                : "";
 
-        return `
-          <article class="day-card">
-            <h3>${date ? `${date} · ` : ""}${title}</h3>
-            ${description ? `<p>${description}</p>` : ""}
-            ${activityHtml}
-            ${mapLink}
-          </article>
-        `;
-      }).join("");
-    }
+            return `
+              <li>
+                <span>${escapeHtml(activityName)}</span>
+                ${locationLink}
+              </li>
+            `;
+          }).join("")}
+        </ul>
+      `
+      : "";
+
+    const city = typeof day.city === "string" ? day.city : "";
+
+    const mapLink = city
+      ? `
+        <a href="./mapa.html?city=${encodeURIComponent(city)}">
+          Ver ciudad en el mapa →
+        </a>
+      `
+      : "";
+
+    return `
+      <article class="day-card">
+        <h3>${date ? `${date} · ` : ""}${title}</h3>
+        ${description ? `<p>${description}</p>` : ""}
+        ${activityHtml}
+        ${mapLink}
+      </article>
+    `;
+  }).join("");
+}
 
     async function loadItinerary() {
       try {
