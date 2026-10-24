@@ -1,4 +1,3 @@
-
 /*
  * Europa + Marruecos 2026
  * Archivo: js/map.js
@@ -12,12 +11,15 @@
  * - Coordenadas manuales: latitud, longitud.
  * - Rutas en automóvil y a pie.
  * - Resumen compacto de distancia y duración.
+ * - Ubicación GPS actual y seguimiento.
+ * - Marcador de posición y círculo de precisión.
  * - Diagnóstico detallado de errores.
  *
  * Servicios:
  * - Photon: geocodificación.
  * - OpenStreetMap: mapa base.
  * - OSRM público de FOSSGIS: cálculo de rutas.
+ * - Geolocation API: ubicación del dispositivo.
  */
 
 (function () {
@@ -45,7 +47,13 @@
     photonMinimumInterval: 1000,
     requestTimeout: 15000,
 
-    routePlaceholder: "Hotel, dirección, estación, plaza..."
+    routePlaceholder: "Hotel, dirección, estación, plaza...",
+
+    // Configuración GPS
+    gpsEnableHighAccuracy: true,
+    gpsMaximumAge: 5000,
+    gpsTimeout: 20000,
+    gpsZoom: 16
   };
 
   let map = null;
@@ -61,6 +69,16 @@
 
   let selectedOrigin = null;
   let selectedDestination = null;
+
+  // Estado de geolocalización
+  let gpsWatchId = null;
+  let gpsMarker = null;
+  let gpsAccuracyCircle = null;
+  let gpsControl = null;
+  let gpsButton = null;
+  let gpsStatus = null;
+  let gpsTrackingActive = false;
+  let gpsHasPosition = false;
 
   const searches = {
     origin: {
@@ -367,25 +385,110 @@
       #mapLocationList .map-pending {
         color: #8a5b20;
       }
-/*
-      #toggleItineraryLocations {
-        display: inline-flex;
-        align-items: center;
-        gap: 7px;
-        margin: 8px 0;
-        padding: 8px 12px;
-        color: #294c3a;
-        background: #f4f6f0;
-        border: 1px solid #cdd8cd;
-        border-radius: 8px;
-        font-size: 0.88rem;
-        cursor: pointer;
+
+      /* Control GPS de Leaflet */
+
+      .trip-map-gps-control {
+        background: transparent;
+        border: 0;
       }
 
-      #toggleItineraryLocations:hover {
-        background: #e8eee5;
+      .trip-map-gps-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        min-height: 42px;
+        padding: 9px 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 9px;
+        background: #ffffff;
+        color: #1e293b;
+        box-shadow: 0 2px 8px #00000022;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        white-space: nowrap;
       }
-*/
+
+      .trip-map-gps-button:hover {
+        background: #f1f5f9;
+      }
+
+      .trip-map-gps-button:focus-visible {
+        outline: 3px solid #60a5fa;
+        outline-offset: 2px;
+      }
+
+      .trip-map-gps-button:disabled {
+        cursor: wait;
+        opacity: 0.75;
+      }
+
+      .trip-map-gps-button.is-active {
+        color: #ffffff;
+        background: #1769aa;
+        border-color: #145a91;
+      }
+
+      .trip-map-gps-button.is-active:hover {
+        background: #145a91;
+      }
+
+      .trip-map-gps-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 19px;
+        height: 19px;
+        flex: 0 0 19px;
+        font-size: 19px;
+        line-height: 1;
+      }
+
+      .trip-map-gps-status {
+        max-width: 190px;
+        margin-top: 5px;
+        padding: 5px 7px;
+        color: #334155;
+        background: #ffffffed;
+        border: 1px solid #dbe2ea;
+        border-radius: 6px;
+        box-shadow: 0 1px 5px #00000016;
+        font-size: 11px;
+        line-height: 1.35;
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
+
+      .trip-map-gps-status:empty {
+        display: none;
+      }
+
+      /* Marcador visual de ubicación actual */
+
+      .trip-map-gps-marker {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        border: 3px solid #ffffff;
+        border-radius: 50%;
+        background: #1685f8;
+        box-shadow: 0 1px 7px #00000066;
+        box-sizing: border-box;
+      }
+
+      .trip-map-gps-marker::after {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #ffffff;
+      }
+
       @media (max-width: 620px) {
         #routeTransportSummary {
           grid-template-columns: minmax(0, 1fr);
@@ -398,6 +501,16 @@
 
         #mapLocationList {
           grid-template-columns: minmax(0, 1fr);
+        }
+
+        .trip-map-gps-button {
+          min-height: 44px;
+          padding: 9px 10px;
+          font-size: 12px;
+        }
+
+        .trip-map-gps-status {
+          max-width: 160px;
         }
       }
     `;
@@ -496,7 +609,6 @@
     summary.hidden = true;
   }
 
-
   // ------------------------------------------------------------
   // LISTA DEL ITINERARIO MOSTRAR / OCULTAR
   // ------------------------------------------------------------
@@ -505,18 +617,14 @@
     const list = getElement("mapLocationList");
     if (!list) return;
 
-    // Utilizar el control existente en map.html.
-    // No crear un botón adicional.
     const button = getElement("toggleItineraryLocations");
 
-    // Ocultar la lista al iniciar.
     state.locationListExpanded = false;
     list.hidden = true;
 
     if (!button) {
       console.warn(
-        "No se encontró el control #toggleItineraryLocations. " +
-        "Verifica el identificador de la cajita en map.html."
+        "No se encontró el control #toggleItineraryLocations."
       );
       return;
     }
@@ -524,7 +632,6 @@
     button.setAttribute("aria-controls", "mapLocationList");
     button.setAttribute("aria-expanded", "false");
 
-    // Evitar registrar el evento más de una vez.
     if (button.dataset.toggleInitialized === "true") return;
 
     button.dataset.toggleInitialized = "true";
@@ -533,7 +640,6 @@
       event.preventDefault();
 
       state.locationListExpanded = !state.locationListExpanded;
-
       list.hidden = !state.locationListExpanded;
 
       button.setAttribute(
@@ -547,8 +653,6 @@
     const list = getElement("mapLocationList");
     if (!list) return;
 
-    // Actualizar la visibilidad sin alterar el texto ni el diseño
-    // del control original.
     list.hidden = !state.locationListExpanded;
 
     const button = getElement("toggleItineraryLocations");
@@ -561,7 +665,340 @@
     }
   }
 
-  
+  // ------------------------------------------------------------
+  // GPS: CONTROL DENTRO DEL MAPA LEAFLET
+  // ------------------------------------------------------------
+
+  function updateGpsControl(message) {
+    if (gpsStatus) {
+      gpsStatus.textContent = message || "";
+    }
+
+    if (gpsButton) {
+      gpsButton.classList.toggle(
+        "is-active",
+        gpsTrackingActive
+      );
+
+      gpsButton.setAttribute(
+        "aria-pressed",
+        String(gpsTrackingActive)
+      );
+
+      gpsButton.innerHTML = gpsTrackingActive
+        ? '<span class="trip-map-gps-icon" aria-hidden="true">◉</span><span>Detener GPS</span>'
+        : '<span class="trip-map-gps-icon" aria-hidden="true">◎</span><span>Mi ubicación</span>';
+
+      gpsButton.title = gpsTrackingActive
+        ? "Detener el seguimiento de ubicación"
+        : "Mostrar y seguir mi ubicación actual";
+    }
+  }
+
+  function createGpsControl() {
+    if (!map || typeof L === "undefined") return;
+    if (gpsControl) return;
+
+    gpsControl = L.control({ position: "topright" });
+
+    gpsControl.onAdd = function () {
+      const container = L.DomUtil.create(
+        "div",
+        "trip-map-gps-control"
+      );
+
+      const button = L.DomUtil.create(
+        "button",
+        "trip-map-gps-button",
+        container
+      );
+
+      button.type = "button";
+      button.setAttribute("aria-pressed", "false");
+      button.setAttribute("aria-label", "Mostrar mi ubicación");
+      button.innerHTML =
+        '<span class="trip-map-gps-icon" aria-hidden="true">◎</span><span>Mi ubicación</span>';
+
+      const status = L.DomUtil.create(
+        "div",
+        "trip-map-gps-status",
+        container
+      );
+
+      status.setAttribute("role", "status");
+      status.setAttribute("aria-live", "polite");
+      status.textContent = "";
+
+      gpsButton = button;
+      gpsStatus = status;
+
+      // Evitar que los clics del control muevan el mapa.
+      L.DomEvent.disableClickPropagation(container);
+      L.DomEvent.disableScrollPropagation(container);
+
+      L.DomEvent.on(button, "click", function (event) {
+        L.DomEvent.preventDefault(event);
+        L.DomEvent.stopPropagation(event);
+
+        if (gpsTrackingActive) {
+          stopLocationTracking();
+        } else {
+          startLocationTracking();
+        }
+      });
+
+      return container;
+    };
+
+    gpsControl.addTo(map);
+  }
+
+  function createGpsMarker() {
+    if (!map || typeof L === "undefined") return;
+
+    if (!gpsMarker) {
+      const gpsIcon = L.divIcon({
+        className: "",
+        html: '<div class="trip-map-gps-marker"></div>',
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+      });
+
+      gpsMarker = L.marker([0, 0], {
+        icon: gpsIcon,
+        zIndexOffset: 10000,
+        keyboard: true,
+        title: "Mi ubicación actual"
+      });
+
+      gpsMarker.bindPopup(
+        "<strong>Mi ubicación actual</strong>"
+      );
+    }
+
+    if (!gpsAccuracyCircle) {
+      gpsAccuracyCircle = L.circle([0, 0], {
+        radius: 0,
+        color: "#1685f8",
+        weight: 1.5,
+        opacity: 0.8,
+        fillColor: "#1685f8",
+        fillOpacity: 0.13,
+        interactive: false
+      });
+    }
+  }
+
+  function startLocationTracking() {
+    if (!map) {
+      updateGpsControl("El mapa todavía no está disponible.");
+      return;
+    }
+
+    if (!("geolocation" in navigator)) {
+      updateGpsControl(
+        "Este navegador no admite geolocalización."
+      );
+      return;
+    }
+
+    if (gpsTrackingActive) return;
+
+    gpsTrackingActive = true;
+
+    updateGpsControl(
+      "Solicitando permiso y ubicación al dispositivo…"
+    );
+
+    if (gpsButton) {
+      gpsButton.disabled = true;
+    }
+
+    createGpsMarker();
+
+    try {
+      gpsWatchId = navigator.geolocation.watchPosition(
+        handleGpsPosition,
+        handleGpsError,
+        {
+          enableHighAccuracy: CONFIG.gpsEnableHighAccuracy,
+          maximumAge: CONFIG.gpsMaximumAge,
+          timeout: CONFIG.gpsTimeout
+        }
+      );
+    } catch (error) {
+      gpsTrackingActive = false;
+      gpsWatchId = null;
+
+      if (gpsButton) {
+        gpsButton.disabled = false;
+      }
+
+      updateGpsControl(
+        "No fue posible iniciar el GPS. Inténtalo nuevamente."
+      );
+
+      console.error("No se pudo iniciar la geolocalización:", error);
+    }
+  }
+
+  function handleGpsPosition(position) {
+    if (!gpsTrackingActive || !map) return;
+
+    const latitude = Number(position.coords.latitude);
+    const longitude = Number(position.coords.longitude);
+    const accuracy = Number(position.coords.accuracy);
+
+    const point = {
+      latitude,
+      longitude
+    };
+
+    if (!hasCoordinates(point)) {
+      updateGpsControl(
+        "El dispositivo devolvió coordenadas no válidas."
+      );
+      return;
+    }
+
+    const latLng = L.latLng(latitude, longitude);
+
+    createGpsMarker();
+
+    gpsMarker.setLatLng(latLng);
+
+    if (!map.hasLayer(gpsMarker)) {
+      gpsMarker.addTo(map);
+    }
+
+    const validAccuracy =
+      Number.isFinite(accuracy) && accuracy >= 0;
+
+    if (validAccuracy) {
+      gpsAccuracyCircle.setLatLng(latLng);
+      gpsAccuracyCircle.setRadius(accuracy);
+
+      if (!map.hasLayer(gpsAccuracyCircle)) {
+        gpsAccuracyCircle.addTo(map);
+      }
+    }
+
+    gpsHasPosition = true;
+
+    const accuracyText = validAccuracy
+      ? `Precisión estimada: ${Math.round(accuracy)} m.`
+      : "Precisión estimada no disponible.";
+
+    updateGpsControl(
+      `Ubicación actualizada. ${accuracyText}`
+    );
+
+    if (gpsButton) {
+      gpsButton.disabled = false;
+    }
+
+    // Centrar el mapa en la posición actual.
+    // Se hace con cada actualización mientras el seguimiento está activo.
+    map.setView(
+      latLng,
+      Math.max(map.getZoom(), CONFIG.gpsZoom),
+      { animate: true }
+    );
+
+    // Actualizar el contenido del marcador.
+    const timestamp = position.timestamp
+      ? new Date(position.timestamp).toLocaleTimeString("es-MX")
+      : "";
+
+    gpsMarker.setPopupContent(`
+      <div>
+        <strong>Mi ubicación actual</strong>
+        <div>Latitud: ${latitude.toFixed(6)}</div>
+        <div>Longitud: ${longitude.toFixed(6)}</div>
+        ${
+          validAccuracy
+            ? `<div>Precisión estimada: ${Math.round(accuracy)} m</div>`
+            : ""
+        }
+        ${timestamp ? `<small>Actualización: ${escapeHtml(timestamp)}</small>` : ""}
+      </div>
+    `);
+  }
+
+  function handleGpsError(error) {
+    if (!gpsTrackingActive) return;
+
+    let message;
+
+    switch (error.code) {
+      case error.PERMISSION_DENIED:
+        message =
+          "Permiso denegado. Autoriza la ubicación en el navegador.";
+        break;
+
+      case error.POSITION_UNAVAILABLE:
+        message =
+          "El dispositivo no pudo determinar tu ubicación. Comprueba el GPS o la señal.";
+        break;
+
+      case error.TIMEOUT:
+        message =
+          "El GPS tardó demasiado en responder. Se seguirá intentando recibir la ubicación.";
+        break;
+
+      default:
+        message =
+          "No se pudo obtener la ubicación. Comprueba los permisos del navegador.";
+        break;
+    }
+
+    updateGpsControl(message);
+
+    if (gpsButton) {
+      gpsButton.disabled = false;
+    }
+
+    console.warn("Aviso de geolocalización:", {
+      code: error.code,
+      message: error.message
+    });
+
+    // Si todavía no se obtuvo ninguna posición, dejamos el control
+    // activo para permitir que el navegador vuelva a intentarlo.
+    // El usuario puede detenerlo manualmente.
+  }
+
+  function stopLocationTracking() {
+    gpsTrackingActive = false;
+
+    if (gpsWatchId !== null) {
+      navigator.geolocation.clearWatch(gpsWatchId);
+      gpsWatchId = null;
+    }
+
+    // Retirar los elementos GPS del mapa.
+    // Los marcadores y las rutas del itinerario no se modifican.
+    if (map && gpsMarker && map.hasLayer(gpsMarker)) {
+      map.removeLayer(gpsMarker);
+    }
+
+    if (
+      map &&
+      gpsAccuracyCircle &&
+      map.hasLayer(gpsAccuracyCircle)
+    ) {
+      map.removeLayer(gpsAccuracyCircle);
+    }
+
+    gpsHasPosition = false;
+
+    if (gpsButton) {
+      gpsButton.disabled = false;
+    }
+
+    updateGpsControl("Seguimiento detenido.");
+  }
+
   // ------------------------------------------------------------
   // MAPA LEAFLET
   // ------------------------------------------------------------
@@ -599,6 +1036,9 @@
 
     markerLayer = L.layerGroup().addTo(map);
     routeLayer = L.layerGroup().addTo(map);
+
+    // Agregar el control GPS en la esquina superior derecha.
+    createGpsControl();
 
     return true;
   }
@@ -1075,10 +1515,6 @@
     url.searchParams.set("q", query);
     url.searchParams.set("limit", String(CONFIG.maximumSuggestions));
     url.searchParams.set("lang", "en");
-
-    // Se mantiene el nombre original, aunque la interfaz esté en español.
-    // Photon suele reconocer mejor muchos topónimos internacionales
-    // cuando se consulta sin imponer un idioma regional.
 
     const elapsed = Date.now() - search.lastPhotonRequestAt;
 
@@ -1944,6 +2380,10 @@
     showLocation,
     calculateRoute,
     clearRoute,
+
+    // Funciones GPS disponibles para pruebas desde la consola.
+    startLocationTracking,
+    stopLocationTracking,
 
     filterByCity: function (city) {
       state.city = city || "all";
