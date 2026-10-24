@@ -4,8 +4,7 @@
  * Archivo: js/map.js
  * Función: inicializar el mapa y mostrar las ubicaciones del viaje.
  *
- * Dependencia: Leaflet debe cargarse previamente en index.html
- * o en la página que contenga el mapa.
+ * Dependencia: Leaflet debe cargarse previamente en mapa.html.
  */
 
 (function () {
@@ -59,13 +58,11 @@
   }
 
   function getLocationDescription(location) {
-    const parts = [
+    return [
       location.address,
       location.city,
       location.country
-    ].filter(Boolean);
-
-    return parts.join(" · ");
+    ].filter(Boolean).join(" · ");
   }
 
   function createPopup(location) {
@@ -82,19 +79,28 @@
     `;
   }
 
+  function showStatus(message) {
+    const statusElement = getElement("mapStatus");
+
+    if (statusElement) {
+      statusElement.textContent = message;
+    }
+  }
+
   function initializeMap() {
     const mapElement = getElement("tripMap");
 
     if (!mapElement) {
-      console.warn(
+      console.error(
         "Mapa no inicializado: falta un elemento con id='tripMap'."
       );
+      showStatus("No se encontró el contenedor del mapa en mapa.html.");
       return false;
     }
 
     if (typeof L === "undefined") {
       showStatus(
-        "No se pudo cargar Leaflet. Revisa la conexión y las referencias de la página."
+        "No se pudo cargar Leaflet. Revisa la conexión y las referencias de mapa.html."
       );
       console.error("Leaflet no está disponible.");
       return false;
@@ -114,14 +120,6 @@
     markerLayer = L.layerGroup().addTo(map);
 
     return true;
-  }
-
-  function showStatus(message) {
-    const statusElement = getElement("mapStatus");
-
-    if (statusElement) {
-      statusElement.textContent = message;
-    }
   }
 
   function renderCityOptions() {
@@ -196,7 +194,7 @@
       marker.addTo(markerLayer);
 
       if (location.id) {
-        markersById.set(location.id, marker);
+        markersById.set(String(location.id), marker);
       }
 
       bounds.push([
@@ -248,7 +246,8 @@
       });
 
     if (locations.length === 0) {
-      list.innerHTML = "<p>No hay ubicaciones que coincidan con el filtro.</p>";
+      list.innerHTML =
+        "<p>No hay ubicaciones que coincidan con el filtro.</p>";
       return;
     }
 
@@ -276,12 +275,7 @@
 
     list.querySelectorAll("[data-location-id]").forEach(button => {
       button.addEventListener("click", function () {
-        const marker = markersById.get(button.dataset.locationId);
-
-        if (marker && map) {
-          map.setView(marker.getLatLng(), 15);
-          marker.openPopup();
-        }
+        showLocation(button.dataset.locationId);
       });
     });
   }
@@ -303,6 +297,52 @@
         renderMarkers();
       });
     }
+  }
+
+  function showLocation(id) {
+    if (!id) {
+      return false;
+    }
+
+    const locationId = String(id);
+    let marker = markersById.get(locationId);
+
+    // Si un filtro oculta la ubicación, quitar los filtros y buscarla otra vez.
+    if (!marker) {
+      const location = allLocations.find(
+        item => String(item.id) === locationId
+      );
+
+      if (!location || !hasCoordinates(location)) {
+        return false;
+      }
+
+      state.city = "all";
+      state.search = "";
+
+      const citySelect = getElement("mapCityFilter");
+      const searchInput = getElement("mapSearch");
+
+      if (citySelect) {
+        citySelect.value = "all";
+      }
+
+      if (searchInput) {
+        searchInput.value = "";
+      }
+
+      renderMarkers();
+      marker = markersById.get(locationId);
+    }
+
+    if (!marker || !map) {
+      return false;
+    }
+
+    map.setView(marker.getLatLng(), 15);
+    marker.openPopup();
+
+    return true;
   }
 
   async function loadLocations() {
@@ -333,13 +373,12 @@
         typeof location.name === "string"
       );
 
-
-      // Leer filtros y ubicación solicitada desde la URL.
+      // Leer los parámetros de la URL una sola vez.
       const params = new URLSearchParams(window.location.search);
       const requestedCity = params.get("city");
       const requestedLocation = params.get("location");
 
-      // Aplicar filtro de ciudad si corresponde.
+      // Aplicar el filtro de ciudad, si se proporcionó.
       if (requestedCity) {
         const matchingCity = allLocations.find(location =>
           String(location.city || "").toLocaleLowerCase("es") ===
@@ -354,41 +393,32 @@
       renderCityOptions();
       renderMarkers();
 
-      // Abrir el marcador solicitado, si existe.
+      // Abrir el marcador solicitado desde el itinerario.
       if (requestedLocation) {
-        const found = window.TripMap.showLocation(requestedLocation);
+        const found = showLocation(requestedLocation);
 
         if (!found) {
           showStatus(
-            "No hay un marcador disponible para este lugar. " +
-            "Verifica su locationId y sus coordenadas en locations.json."
-          );
-        }
-      }
-
-
-      // Si la página recibe ?location=ID, abrir ese lugar en el mapa.
-      const params = new URLSearchParams(window.location.search);
-      const requestedLocation = params.get("location");
-
-      if (requestedLocation) {
-        const found = window.TripMap.showLocation(requestedLocation);
-
-        if (!found) {
-          showStatus(
-            "El lugar solicitado no tiene un marcador disponible. " +
-            "Puede estar pendiente de coordenadas o de revisión."
+            "No se encontró un marcador para este lugar. " +
+            "Verifica el locationId y las coordenadas en locations.json."
           );
         }
       }
 
       if (allLocations.length === 0) {
         showStatus("No se encontraron ubicaciones en el archivo.");
+      } else if (
+        !allLocations.some(location => hasCoordinates(location))
+      ) {
+        showStatus(
+          "Se cargaron las ubicaciones, pero ninguna tiene coordenadas válidas."
+        );
       }
     } catch (error) {
       console.error("Error al cargar las ubicaciones:", error);
       showStatus(
-        "No se pudieron cargar las ubicaciones. Verifica la ruta y el formato de locations.json."
+        "No se pudieron cargar las ubicaciones. " +
+        "Verifica la ruta y el formato de locations.json."
       );
     }
   }
@@ -405,6 +435,7 @@
   window.TripMap = {
     start,
     refresh: loadLocations,
+
     filterByCity: function (city) {
       state.city = city || "all";
 
@@ -416,17 +447,8 @@
 
       renderMarkers();
     },
-    showLocation: function (id) {
-      const marker = markersById.get(id);
 
-      if (marker && map) {
-        map.setView(marker.getLatLng(), 15);
-        marker.openPopup();
-        return true;
-      }
-
-      return false;
-    }
+    showLocation
   };
 
   if (document.readyState === "loading") {
