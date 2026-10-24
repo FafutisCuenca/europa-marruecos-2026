@@ -12,6 +12,7 @@
  * - Coordenadas manuales: latitud, longitud.
  * - Rutas en automóvil y a pie.
  * - Distancia, duración estimada y limpieza de rutas.
+ * - Lista del itinerario compatible con mostrar/ocultar.
  *
  * Servicios públicos:
  * - Photon: búsqueda geográfica.
@@ -42,7 +43,10 @@
     searchDelay: 500,
     minimumSearchLength: 3,
     maximumSuggestions: 6,
-    photonMinimumInterval: 1000
+    photonMinimumInterval: 1000,
+
+    // Mensaje idéntico para origen y destino.
+    routePlaceholder: "Hotel, dirección, estación, plaza..."
   };
 
   let map = null;
@@ -55,11 +59,9 @@
   let currentRoute = null;
   let routeRequestInProgress = false;
 
-  // Origen y destino elegidos por el usuario.
   let selectedOrigin = null;
   let selectedDestination = null;
 
-  // Estado independiente para las búsquedas de origen y destino.
   const searches = {
     origin: {
       timer: null,
@@ -91,16 +93,22 @@
   }
 
   function hasCoordinates(location) {
-    return Boolean(
-      location &&
-      Number.isFinite(Number(location.latitude)) &&
-      Number.isFinite(Number(location.longitude)) &&
+    if (!location) return false;
+
+    const latitude = Number(location.latitude);
+    const longitude = Number(location.longitude);
+
+    return (
       location.latitude !== "" &&
       location.longitude !== "" &&
-      Number(location.latitude) >= -90 &&
-      Number(location.latitude) <= 90 &&
-      Number(location.longitude) >= -180 &&
-      Number(location.longitude) <= 180
+      location.latitude !== null &&
+      location.longitude !== null &&
+      Number.isFinite(latitude) &&
+      Number.isFinite(longitude) &&
+      latitude >= -90 &&
+      latitude <= 90 &&
+      longitude >= -180 &&
+      longitude <= 180
     );
   }
 
@@ -235,6 +243,57 @@
       label: location.label || getLocationLabel(location),
       source: location.source || "itinerary"
     };
+  }
+
+  // ------------------------------------------------------------
+  // PREPARAR CAMPOS DE ORIGEN Y DESTINO
+  // ------------------------------------------------------------
+
+  function prepareDestinationInput() {
+    const existing = getElement("routeDestination");
+
+    if (!existing || existing.tagName === "INPUT") {
+      if (existing) {
+        existing.type = "text";
+        existing.placeholder = CONFIG.routePlaceholder;
+        existing.autocomplete = "off";
+      }
+
+      return;
+    }
+
+    const input = document.createElement("input");
+
+    input.type = "text";
+    input.id = "routeDestination";
+    input.name = existing.name || "routeDestination";
+
+    // Corregido: el mismo placeholder que el origen.
+    input.placeholder = CONFIG.routePlaceholder;
+    input.autocomplete = "off";
+    input.className = existing.className || "";
+
+    input.setAttribute("aria-label", "Punto de destino");
+    input.setAttribute("aria-autocomplete", "list");
+    input.setAttribute("aria-describedby", "destinationHelp");
+
+    if (existing.required) input.required = true;
+    if (existing.disabled) input.disabled = true;
+
+    existing.replaceWith(input);
+  }
+
+  function prepareOriginInput() {
+    const input = getElement("routeOrigin");
+
+    if (!input) return;
+
+    input.type = "text";
+    input.placeholder = CONFIG.routePlaceholder;
+    input.autocomplete = "off";
+
+    input.setAttribute("aria-label", "Punto de origen");
+    input.setAttribute("aria-autocomplete", "list");
   }
 
   // ------------------------------------------------------------
@@ -377,13 +436,73 @@
         : "")
     );
 
+    // La lista se actualiza, pero no se obliga a mostrarla.
     renderLocationList();
+  }
+
+  function installLocationListStyles() {
+    if (getElement("tripMapLocationListStyles")) return;
+
+    const style = document.createElement("style");
+    style.id = "tripMapLocationListStyles";
+
+    style.textContent = `
+      #mapLocationList[hidden] {
+        display: none !important;
+      }
+
+      #mapLocationList {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        gap: 10px;
+      }
+
+      #mapLocationList .map-location-item {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        width: 100%;
+        padding: 13px;
+        text-align: left;
+        color: #25332e;
+        background: #fffdf8;
+        border: 1px solid #dedfd5;
+        border-radius: 10px;
+        cursor: pointer;
+        overflow-wrap: anywhere;
+      }
+
+      #mapLocationList .map-location-item:hover:not(:disabled) {
+        background: #eef3ec;
+        border-color: #8aa294;
+      }
+
+      #mapLocationList .map-location-item:disabled {
+        color: #68756f;
+        cursor: not-allowed;
+        opacity: 0.8;
+      }
+
+      #mapLocationList .map-location-item span {
+        font-size: 0.88rem;
+      }
+
+      #mapLocationList .map-pending {
+        color: #8a5b20;
+        font-size: 0.82rem;
+      }
+    `;
+
+    document.head.appendChild(style);
   }
 
   function renderLocationList() {
     const list = getElement("mapLocationList");
 
     if (!list) return;
+
+    // No modificar list.hidden aquí.
+    // El botón de mapa.html controla si la lista está visible.
 
     const locations = allLocations
       .filter(matchesFilters)
@@ -419,7 +538,7 @@
           ${available ? "" : "disabled"}
         >
           <strong>${name}</strong>
-          <span>${description}</span>
+          <span>${description || "Sin dirección adicional"}</span>
           ${
             available
               ? ""
@@ -494,32 +613,7 @@
   }
 
   // ------------------------------------------------------------
-  // CONVERTIR DESTINO SELECT A CAMPO DE TEXTO
-  // ------------------------------------------------------------
-
-  function prepareDestinationInput() {
-    const existing = getElement("routeDestination");
-
-    if (!existing || existing.tagName === "INPUT") return;
-
-    const input = document.createElement("input");
-
-    input.type = "text";
-    input.id = "routeDestination";
-    input.name = existing.name || "routeDestination";
-    input.placeholder = "Escribe un destino o selecciona una sugerencia";
-    input.autocomplete = "off";
-    input.setAttribute("aria-label", "Punto de destino");
-    input.setAttribute("aria-autocomplete", "list");
-
-    // Conservar las clases visuales del selector original.
-    input.className = existing.className || "";
-
-    existing.replaceWith(input);
-  }
-
-  // ------------------------------------------------------------
-  // BÚSQUEDA Y SUGERENCIAS PARA ORIGEN Y DESTINO
+  // SUGERENCIAS PARA ORIGEN Y DESTINO
   // ------------------------------------------------------------
 
   function ensureSuggestionPanel(type) {
@@ -532,6 +626,7 @@
     if (!input || searches[type].panel) return;
 
     const panel = document.createElement("div");
+
     panel.id = type === "origin"
       ? "routeOriginSuggestionsPanel"
       : "routeDestinationSuggestionsPanel";
@@ -876,6 +971,9 @@
     input.setAttribute("autocomplete", "off");
     input.setAttribute("aria-autocomplete", "list");
 
+    // Asegurar que ambos campos tengan el mismo placeholder.
+    input.placeholder = CONFIG.routePlaceholder;
+
     input.addEventListener("input", function () {
       if (type === "origin") {
         selectedOrigin = null;
@@ -1013,11 +1111,13 @@
 
   async function resolvePoint(type) {
     const isOrigin = type === "origin";
+
     const input = getElement(
       isOrigin ? "routeOrigin" : "routeDestination"
     );
 
     const text = input ? input.value.trim() : "";
+
     const selected = isOrigin
       ? selectedOrigin
       : selectedDestination;
@@ -1042,8 +1142,11 @@
 
     if (coordinates) {
       const result = {
-        name: isOrigin ? "Origen por coordenadas" : "Destino por coordenadas",
-        label: `Coordenadas: ${coordinates.latitude}, ${coordinates.longitude}`,
+        name: isOrigin
+          ? "Origen por coordenadas"
+          : "Destino por coordenadas",
+        label:
+          `Coordenadas: ${coordinates.latitude}, ${coordinates.longitude}`,
         latitude: coordinates.latitude,
         longitude: coordinates.longitude,
         source: "coordinates"
@@ -1123,7 +1226,6 @@
   // ------------------------------------------------------------
 
   function populateRouteSelectors() {
-    // routeDestination ahora es un campo de texto, no un selector.
     const destinationInput = getElement("routeDestination");
     const originInput = getElement("routeOrigin");
 
@@ -1131,10 +1233,12 @@
 
     if (destinationInput) {
       destinationInput.disabled = false;
+      destinationInput.placeholder = CONFIG.routePlaceholder;
     }
 
     if (originInput) {
       originInput.disabled = false;
+      originInput.placeholder = CONFIG.routePlaceholder;
     }
 
     const calculateButton = getElement("calculateRoute");
@@ -1143,7 +1247,6 @@
       calculateButton.disabled = false;
     }
 
-    // Se conserva el datalist de origen si existe.
     const datalist = getElement("routeOriginSuggestions");
 
     if (datalist) {
@@ -1198,6 +1301,8 @@
     const duration = escapeHtml(formatDuration(route.duration));
     const modeLabel = mode === "walking" ? "A pie" : "Automóvil";
 
+    summary.hidden = false;
+
     summary.innerHTML = `
       <p class="route-summary-title">Ruta calculada</p>
       <p class="route-summary-detail"><strong>Transporte:</strong> ${modeLabel}</p>
@@ -1223,6 +1328,7 @@
 
     if (summary) {
       summary.innerHTML = "";
+      summary.hidden = true;
     }
 
     if (options.showStatus !== false) {
@@ -1532,8 +1638,9 @@
   // ------------------------------------------------------------
 
   function start() {
-    // Convertir el destino antes de conectar sus eventos.
+    prepareOriginInput();
     prepareDestinationInput();
+    installLocationListStyles();
 
     if (!initializeMap()) return;
 
