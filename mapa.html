@@ -1,0 +1,501 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#173c35">
+
+  <title>Mapa del itinerario | Europa + Marruecos 2026</title>
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  >
+
+  <style>
+    :root {
+      --green: #173c35;
+      --green-light: #28594d;
+      --cream: #f7f4ec;
+      --paper: #fffdf8;
+      --gold: #bd9656;
+      --text: #25332e;
+      --muted: #68756f;
+      --border: #dedfd5;
+      --shadow: 0 8px 24px rgba(23, 60, 53, 0.09);
+      --radius: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--cream);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.5;
+    }
+
+    a {
+      color: var(--green-light);
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    .hero {
+      padding: 28px 20px;
+      color: white;
+      background: linear-gradient(135deg, var(--green), var(--green-light));
+    }
+
+    .hero-inner,
+    main {
+      width: min(1200px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-bottom: 14px;
+      color: #f2dfb9;
+      text-decoration: none;
+      font-size: 0.93rem;
+    }
+
+    .back-link:hover {
+      text-decoration: underline;
+    }
+
+    .eyebrow {
+      margin: 0 0 6px;
+      color: #e3c995;
+      font-size: 0.8rem;
+      font-weight: bold;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.8rem, 4vw, 2.7rem);
+      line-height: 1.15;
+    }
+
+    .hero p {
+      max-width: 700px;
+      margin: 12px 0 0;
+      color: #edf2ed;
+    }
+
+    main {
+      padding: 24px 0 42px;
+    }
+
+    .panel {
+      margin-bottom: 20px;
+      padding: 22px;
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .panel h2 {
+      margin: 0 0 8px;
+      color: var(--green);
+      font-size: 1.3rem;
+    }
+
+    .intro {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+      gap: 14px;
+    }
+
+    .route-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .field {
+      min-width: 0;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 7px;
+      color: var(--green);
+      font-size: 0.92rem;
+      font-weight: 700;
+    }
+
+    .field input,
+    .field select {
+      display: block;
+      width: 100%;
+      min-height: 48px;
+      padding: 11px 13px;
+      color: var(--text);
+      background: white;
+      border: 1px solid #cbd2ca;
+      border-radius: 10px;
+      outline: none;
+    }
+
+    .field input:focus,
+    .field select:focus {
+      border-color: var(--green-light);
+      box-shadow: 0 0 0 3px rgba(40, 89, 77, 0.13);
+    }
+
+    .field input::placeholder {
+      color: #78837d;
+      opacity: 1;
+    }
+
+    .field-help {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .route-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 10px 16px;
+      color: white;
+      background: var(--green);
+      border: 1px solid var(--green);
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 700;
+      text-align: center;
+      text-decoration: none;
+      transition: background 0.15s ease, transform 0.15s ease;
+    }
+
+    .btn:hover {
+      background: var(--green-light);
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn-secondary {
+      color: var(--green);
+      background: white;
+      border-color: #bdc9c0;
+    }
+
+    .btn-secondary:hover {
+      color: white;
+      border-color: var(--green-light);
+    }
+
+    .btn-gold {
+      color: #26352e;
+      background: #e6d0a7;
+      border-color: #d2b57d;
+    }
+
+    .btn-gold:hover {
+      color: #26352e;
+      background: #d9bd8a;
+    }
+
+    .status {
+      min-height: 24px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .route-summary {
+      margin-top: 12px;
+      padding: 13px;
+      background: #f2f5ef;
+      border-radius: 10px;
+    }
+
+    .map-heading {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .map-heading h2 {
+      margin: 0;
+    }
+
+    #tripMap {
+      width: 100%;
+      height: min(68vh, 650px);
+      min-height: 360px;
+      overflow: hidden;
+      background: #e8ece5;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      z-index: 1;
+    }
+
+    .map-note {
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    .itinerary-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .itinerary-toolbar p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    #mapLocationList {
+      margin-top: 18px;
+    }
+
+    #mapLocationList[hidden] {
+      display: none !important;
+    }
+
+    .footer-note {
+      padding: 18px 4px 0;
+      color: var(--muted);
+      font-size: 0.85rem;
+      text-align: center;
+    }
+
+    @media (max-width: 700px) {
+      .hero {
+        padding: 23px 0;
+      }
+
+      .filters,
+      .route-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .panel {
+        padding: 17px;
+      }
+
+      #tripMap {
+        height: 58vh;
+        min-height: 320px;
+      }
+
+      .route-actions .btn {
+        flex: 1 1 100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <a class="back-link" href="./index.html">
+        ← Volver al itinerario principal
+      </a>
+
+      <p class="eyebrow">Europa + Marruecos · 2026</p>
+      <h1>Mapa interactivo del viaje</h1>
+      <p>
+        Explora los lugares del viaje, busca direcciones y calcula rutas
+        entre hoteles, estaciones, plazas y otros puntos de interés.
+      </p>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel" aria-labelledby="filtersTitle">
+      <h2 id="filtersTitle">Explorar lugares</h2>
+      <p class="intro">
+        Filtra los lugares por ciudad o escribe una palabra para encontrarlos.
+      </p>
+
+      <div class="filters">
+        <div class="field">
+          <label for="mapCityFilter">Ciudad</label>
+          <select id="mapCityFilter">
+            <option value="">Todas las ciudades</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="mapSearch">Buscar un lugar</label>
+          <input
+            id="mapSearch"
+            type="search"
+            placeholder="Nombre del lugar, ciudad o dirección..."
+            autocomplete="off"
+          >
+        </div>
+      </div>
+
+      <div id="mapStatus" class="status" role="status" aria-live="polite">
+        Cargando los lugares del itinerario...
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="routeTitle">
+      <h2 id="routeTitle">Planear una ruta</h2>
+      <p class="intro">
+        Escribe el origen y el destino. Puedes introducir un lugar del
+        itinerario, una dirección, un hotel, una estación o una plaza.
+        También puedes seleccionar una sugerencia cuando esté disponible.
+      </p>
+
+      <div class="route-grid">
+        <div class="field">
+          <label for="routeOrigin">Punto de origen</label>
+          <input
+            id="routeOrigin"
+            type="text"
+            placeholder="Hotel, dirección, estación, plaza..."
+            autocomplete="off"
+            aria-describedby="originHelp"
+          >
+          <span id="originHelp" class="field-help">
+            Escribe el lugar de salida o selecciona una sugerencia.
+          </span>
+        </div>
+
+        <div class="field">
+          <label for="routeDestination">Punto de destino</label>
+          <select id="routeDestination" aria-describedby="destinationHelp">
+            <option value="">Hotel, dirección, estación, plaza...</option>
+          </select>
+          <span id="destinationHelp" class="field-help">
+            Escribe el lugar de llegada o selecciona una sugerencia.
+          </span>
+        </div>
+
+        <div class="field">
+          <label for="routeMode">Medio de transporte</label>
+          <select id="routeMode">
+            <option value="car">Automóvil</option>
+            <option value="walking">A pie</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="route-actions">
+        <button id="calculateRoute" class="btn" type="button">
+          Calcular ruta
+        </button>
+
+        <button id="clearRoute" class="btn btn-secondary" type="button">
+          Limpiar ruta
+        </button>
+      </div>
+
+      <div id="routeStatus" class="status" role="status" aria-live="polite"></div>
+      <div id="routeSummary" class="route-summary" hidden></div>
+    </section>
+
+    <section class="panel" aria-labelledby="mapTitle">
+      <div class="map-heading">
+        <h2 id="mapTitle">Mapa del viaje</h2>
+      </div>
+
+      <div id="tripMap" aria-label="Mapa interactivo de los lugares del viaje"></div>
+
+      <p class="map-note">
+        Puedes acercar, alejar y mover el mapa. Selecciona un marcador
+        para consultar el lugar correspondiente.
+      </p>
+    </section>
+
+    <section class="panel" aria-labelledby="itineraryTitle">
+      <div class="itinerary-toolbar">
+        <div>
+          <h2 id="itineraryTitle">Lugares del itinerario</h2>
+          <p>
+            La lista permanece oculta al abrir la página para que puedas
+            concentrarte en el mapa y en la planeación de rutas.
+          </p>
+        </div>
+
+        <button
+          id="toggleItinerary"
+          class="btn btn-gold"
+          type="button"
+          aria-expanded="false"
+          aria-controls="mapLocationList"
+        >
+          Ver todos los lugares del itinerario
+        </button>
+      </div>
+
+      <div id="mapLocationList" hidden></div>
+    </section>
+
+    <p class="footer-note">
+      Europa + Marruecos 2026 · Mapa y planeación de rutas
+    </p>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="./js/map.js"></script>
+
+  <script>
+    (() => {
+      const toggleButton = document.getElementById("toggleItinerary");
+      const locationList = document.getElementById("mapLocationList");
+
+      if (!toggleButton || !locationList) return;
+
+      toggleButton.addEventListener("click", () => {
+        const isExpanded =
+          toggleButton.getAttribute("aria-expanded") === "true";
+
+        const nextExpanded = !isExpanded;
+
+        locationList.hidden = !nextExpanded;
+        toggleButton.setAttribute("aria-expanded", String(nextExpanded));
+
+        toggleButton.textContent = nextExpanded
+          ? "Ocultar lugares del itinerario"
+          : "Ver todos los lugares del itinerario";
+      });
+    })();
+  </script>
+</body>
+</html>
