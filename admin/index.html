@@ -96,12 +96,20 @@
 
     button:disabled { opacity: .6; cursor: wait; }
 
+    .disconnect-button {
+      background: #68756f;
+      margin-left: 8px;
+    }
+
     .note, .status {
       color: var(--muted);
       font-size: .92rem;
     }
 
-    .status { margin-top: 14px; overflow-wrap: anywhere; }
+    .status {
+      margin-top: 14px;
+      overflow-wrap: anywhere;
+    }
 
     .metrics {
       display: grid;
@@ -138,55 +146,63 @@
     }
 
     .password-container {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
 
-.password-container input {
-  flex: 1;
-  min-width: 0;
-}
+    .password-container input {
+      flex: 1;
+      min-width: 0;
+    }
+
     .top-pages {
-  display: grid;
-  gap: 16px;
-  margin-top: 16px;
-}
+      display: grid;
+      gap: 16px;
+      margin-top: 16px;
+    }
 
-.page-item {
-  padding: 14px;
-  background: #f2f5ef;
-  border-radius: 10px;
-}
+    .page-item {
+      padding: 14px;
+      background: #f2f5ef;
+      border-radius: 10px;
+    }
 
-.page-heading {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  font-weight: bold;
-}
+    .page-heading {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-weight: bold;
+    }
 
-.page-path {
-  margin-top: 4px;
-  color: var(--muted);
-  font-size: .85rem;
-  overflow-wrap: anywhere;
-}
+    .page-path {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: .85rem;
+      overflow-wrap: anywhere;
+    }
 
-.page-bar {
-  height: 9px;
-  margin-top: 10px;
-  background: #dce4da;
-  border-radius: 20px;
-  overflow: hidden;
-}
+    .page-bar {
+      height: 9px;
+      margin-top: 10px;
+      background: #dce4da;
+      border-radius: 20px;
+      overflow: hidden;
+    }
 
-.page-bar-fill {
-  height: 100%;
-  background: var(--green-light);
-  border-radius: 20px;
-}
+    .page-bar-fill {
+      height: 100%;
+      background: var(--green-light);
+      border-radius: 20px;
+    }
+
+    @media (max-width: 520px) {
+      .disconnect-button {
+        margin-left: 0;
+      }
+    }
   </style>
+
   <link rel="stylesheet" href="./css/admin.css">
 </head>
 
@@ -200,138 +216,157 @@
   </header>
 
   <main>
+
     <nav class="navigation" aria-label="Navegación administrativa">
-  <a href="./index.html">Resumen general</a>
-  <a href="./visitas.html">Histórico de visitas</a>
-  <a href="./mapa-visitas.html">Procedencia geográfica</a>
-</nav>
+      <a href="./index.html">Resumen general</a>
+      <a href="./visitas.html">Histórico de visitas</a>
+      <a href="./mapa-visitas.html">Procedencia geográfica</a>
+    </nav>
+
     <section class="panel">
       <h2>Conexión con GoatCounter</h2>
+
       <p class="note">
-        Introduce tu clave API de lectura. Se utilizará solo en esta
-        página y no se guardará en el navegador.
+        Introduce tu clave API de lectura. Después de verificarla,
+        se conservará temporalmente en esta sesión del navegador
+        para utilizarla en las demás páginas administrativas.
       </p>
 
       <form id="connectionForm">
-  <label for="apiKey">Clave API</label>
 
-  <div class="password-container">
-    <input
-      id="apiKey"
-      type="password"
-      autocomplete="off"
-      required
-      placeholder="Introduce tu clave API"
-    >
+        <label for="apiKey">Clave API</label>
 
-    <button
-      id="toggleApiKey"
-      type="button"
-    >
-      Mostrar
-    </button>
-  </div>
+        <div class="password-container">
+          <input
+            id="apiKey"
+            type="password"
+            autocomplete="off"
+            required
+            placeholder="Introduce tu clave API"
+          >
 
-  <button id="connectButton" type="submit">
-    Verificar conexión
-  </button>
-</form>
+          <button id="toggleApiKey" type="button">
+            Mostrar
+          </button>
+        </div>
 
-      <div id="connectionStatus" class="status" role="status"
-           aria-live="polite">Esperando la conexión.</div>
+        <button id="connectButton" type="submit">
+          Verificar conexión
+        </button>
+
+        <button
+          id="disconnectButton"
+          class="disconnect-button hidden"
+          type="button"
+        >
+          Desconectar
+        </button>
+
+      </form>
+
+      <div
+        id="connectionStatus"
+        class="status"
+        role="status"
+        aria-live="polite"
+      >
+        Esperando la conexión.
+      </div>
     </section>
 
     <section id="dashboard" class="panel hidden">
-  <h2>Resumen de visitas</h2>
-  <p class="note">Estadísticas de uso de Europa + Marruecos 2026.</p>
 
-  <div class="metrics">
-    <div class="metric">
-      <span>Visitantes registrados</span>
-      <strong id="totalVisits">—</strong>
-    </div>
+      <h2>Resumen de visitas</h2>
 
-    <div class="metric">
-      <span>Páginas consultadas</span>
-      <strong id="pageCount">—</strong>
-    </div>
-  </div>
+      <p class="note">
+        Estadísticas de uso de Europa + Marruecos 2026.
+      </p>
 
-  <h2 style="margin-top:28px">Páginas más consultadas</h2>
-  <div id="topPages" class="top-pages">
-    Esperando estadísticas...
-  </div>
-</section>
-    
+      <div class="metrics">
+
+        <div class="metric">
+          <span>Visitantes registrados</span>
+          <strong id="totalVisits">—</strong>
+        </div>
+
+        <div class="metric">
+          <span>Páginas consultadas</span>
+          <strong id="pageCount">—</strong>
+        </div>
+
+      </div>
+
+      <h2 style="margin-top:28px">
+        Páginas más consultadas
+      </h2>
+
+      <div id="topPages" class="top-pages">
+        Esperando estadísticas...
+      </div>
+
+    </section>
+
     <footer>
       Europa + Marruecos 2026 · Administración privada
     </footer>
+
   </main>
 
+  <script>
+  (() => {
+    "use strict";
 
-<script>
-(() => {
-  const API = "https://ljcuenca.goatcounter.com/api/v0";
+    const API = "https://ljcuenca.goatcounter.com/api/v0";
+    const SESSION_KEY = "europaMarruecosGoatCounterToken";
 
-  const form = document.getElementById("connectionForm");
-  const keyInput = document.getElementById("apiKey");
-  const button = document.getElementById("connectButton");
-  const toggleButton = document.getElementById("toggleApiKey");
-  const status = document.getElementById("connectionStatus");
-  const dashboard = document.getElementById("dashboard");
-  const output = document.getElementById("apiOutput");
+    const form = document.getElementById("connectionForm");
+    const keyInput = document.getElementById("apiKey");
+    const button = document.getElementById("connectButton");
+    const toggleButton = document.getElementById("toggleApiKey");
+    const disconnectButton = document.getElementById("disconnectButton");
+    const status = document.getElementById("connectionStatus");
+    const dashboard = document.getElementById("dashboard");
 
-  // Mostrar u ocultar la clave API.
-  toggleButton.addEventListener("click", () => {
-    const mostrar = keyInput.type === "password";
+    // Mostrar u ocultar la clave API.
+    toggleButton.addEventListener("click", () => {
+      const mostrar = keyInput.type === "password";
 
-    keyInput.type = mostrar ? "text" : "password";
-    toggleButton.textContent = mostrar ? "Ocultar" : "Mostrar";
-  });
-
-  // Consultar la API de GoatCounter.
-  async function apiGet(path, key) {
-    const response = await fetch(API + path, {
-      method: "GET",
-      headers: {
-        "Authorization": "Bearer " + key,
-        "Accept": "application/json"
-      },
-      cache: "no-store"
+      keyInput.type = mostrar ? "text" : "password";
+      toggleButton.textContent = mostrar ? "Ocultar" : "Mostrar";
     });
 
-    const responseText = await response.text();
+    // Consultar la API de GoatCounter.
+    async function apiGet(path, key) {
+      const response = await fetch(API + path, {
+        method: "GET",
+        headers: {
+          "Authorization": "Bearer " + key,
+          "Accept": "application/json"
+        },
+        cache: "no-store"
+      });
 
-    if (!response.ok) {
-      const error = new Error(
-        "HTTP " + response.status + ": " +
-        responseText.slice(0, 300)
-      );
-      error.status = response.status;
-      throw error;
+      const responseText = await response.text();
+
+      if (!response.ok) {
+        const error = new Error(
+          "HTTP " + response.status + ": " +
+          responseText.slice(0, 300)
+        );
+
+        error.status = response.status;
+        throw error;
+      }
+
+      try {
+        return JSON.parse(responseText);
+      } catch {
+        throw new Error("La API no devolvió JSON válido.");
+      }
     }
 
-    try {
-      return JSON.parse(responseText);
-    } catch {
-      throw new Error("La API no devolvió JSON válido.");
-    }
-  }
-
-  // Verificar conexión.
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    const key = keyInput.value.trim();
-    if (!key) return;
-
-    button.disabled = true;
-    status.textContent = "Verificando clave y consultando datos...";
-    dashboard.classList.add("hidden");
-
-    try {
-      await apiGet("/me", key);
-
+    // Consultar estadísticas y actualizar el panel.
+    async function loadDashboard(key) {
       const total = await apiGet("/stats/total", key);
       const pages = await apiGet("/stats/hits", key);
 
@@ -349,67 +384,74 @@
       document.getElementById("pageCount").textContent =
         pageList.length.toLocaleString("es-MX");
 
-     const topPages = document.getElementById("topPages");
+      const topPages = document.getElementById("topPages");
 
-topPages.replaceChildren();
+      topPages.replaceChildren();
 
-const sortedPages = [...pageList].sort(
-  (a, b) => (b.count || 0) - (a.count || 0)
-);
+      const sortedPages = [...pageList].sort(
+        (a, b) => (b.count || 0) - (a.count || 0)
+      );
 
-const maxCount = Math.max(
-  1,
-  ...sortedPages.map(page => Number(page.count) || 0)
-);
+      const maxCount = Math.max(
+        1,
+        ...sortedPages.map(page => Number(page.count) || 0)
+      );
 
-sortedPages.slice(0, 10).forEach(page => {
-  const item = document.createElement("div");
-  item.className = "page-item";
+      sortedPages.slice(0, 10).forEach(page => {
+        const item = document.createElement("div");
+        item.className = "page-item";
 
-  const heading = document.createElement("div");
-  heading.className = "page-heading";
+        const heading = document.createElement("div");
+        heading.className = "page-heading";
 
-  const name = document.createElement("span");
-  name.textContent = page.title || page.path || "Página";
+        const name = document.createElement("span");
+        name.textContent = page.title || page.path || "Página";
 
-  const count = document.createElement("span");
-  count.textContent = Number(page.count || 0).toLocaleString("es-MX");
+        const count = document.createElement("span");
+        count.textContent =
+          Number(page.count || 0).toLocaleString("es-MX");
 
-  heading.append(name, count);
+        heading.append(name, count);
 
-  const path = document.createElement("div");
-  path.className = "page-path";
-  path.textContent = page.path || "";
+        const path = document.createElement("div");
+        path.className = "page-path";
+        path.textContent = page.path || "";
 
-  const bar = document.createElement("div");
-  bar.className = "page-bar";
+        const bar = document.createElement("div");
+        bar.className = "page-bar";
 
-  const fill = document.createElement("div");
-  fill.className = "page-bar-fill";
+        const fill = document.createElement("div");
+        fill.className = "page-bar-fill";
 
-  fill.style.width =
-    Math.min(100, (Number(page.count || 0) / maxCount) * 100) + "%";
+        fill.style.width =
+          Math.min(
+            100,
+            (Number(page.count || 0) / maxCount) * 100
+          ) + "%";
 
-  bar.appendChild(fill);
-  item.append(heading, path, bar);
-  topPages.appendChild(item);
-});
+        bar.appendChild(fill);
+        item.append(heading, path, bar);
+        topPages.appendChild(item);
+      });
 
-if (sortedPages.length === 0) {
-  topPages.textContent = "Todavía no hay páginas registradas.";
-}
+      if (sortedPages.length === 0) {
+        topPages.textContent =
+          "Todavía no hay páginas registradas.";
+      }
 
       dashboard.classList.remove("hidden");
-      status.textContent =
-        "Conexión correcta. Estadísticas recibidas.";
+    }
 
+    // Mostrar la interfaz de sesión activa.
+    function showConnectedState() {
+      disconnectButton.classList.remove("hidden");
       keyInput.value = "";
       keyInput.type = "password";
       toggleButton.textContent = "Mostrar";
+    }
 
-    } catch (error) {
-      console.error("Error de conexión con GoatCounter:", error);
-
+    // Mostrar errores de conexión.
+    function showError(error) {
       let message = error.message;
 
       if (error instanceof TypeError) {
@@ -420,21 +462,127 @@ if (sortedPages.length === 0) {
         message = "Clave no válida o no enviada correctamente.";
       } else if (error.status === 403) {
         message = "La clave no tiene permiso para esta consulta.";
+      } else if (error.status === 429) {
+        message =
+          "Se alcanzó el límite temporal de consultas. " +
+          "Espera unos segundos e inténtalo nuevamente.";
       }
 
       status.textContent =
         message + " Revisa el error y vuelve a intentarlo.";
+    }
+
+    // Verificar conexión y guardar la clave temporalmente.
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const key = keyInput.value.trim();
+
+      if (!key) return;
+
+      button.disabled = true;
+      status.textContent =
+        "Verificando clave y consultando datos...";
+
+      dashboard.classList.add("hidden");
+
+      try {
+        await apiGet("/me", key);
+
+        await loadDashboard(key);
+
+        // Guardar solamente después de verificar la conexión.
+        sessionStorage.setItem(SESSION_KEY, key);
+
+        showConnectedState();
+
+        status.textContent =
+          "Conexión correcta. Sesión activa. " +
+          "Puedes consultar las demás páginas administrativas.";
+
+      } catch (error) {
+        console.error("Error de conexión con GoatCounter:", error);
+
+        sessionStorage.removeItem(SESSION_KEY);
+
+        showError(error);
+
+        keyInput.value = "";
+        keyInput.type = "password";
+        toggleButton.textContent = "Mostrar";
+
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    // Desconectar y eliminar la clave de la sesión.
+    disconnectButton.addEventListener("click", () => {
+      sessionStorage.removeItem(SESSION_KEY);
+
+      dashboard.classList.add("hidden");
+      disconnectButton.classList.add("hidden");
 
       keyInput.value = "";
       keyInput.type = "password";
       toggleButton.textContent = "Mostrar";
 
-    } finally {
-      button.disabled = false;
+      status.textContent =
+        "Sesión cerrada. La clave API se eliminó de esta sesión.";
+
+    });
+
+    // Recuperar automáticamente una sesión existente.
+    async function restoreSession() {
+      let savedKey;
+
+      try {
+        savedKey = sessionStorage.getItem(SESSION_KEY);
+      } catch {
+        status.textContent =
+          "El navegador no permitió acceder al almacenamiento de sesión.";
+        return;
+      }
+
+      if (!savedKey) return;
+
+      button.disabled = true;
+      status.textContent =
+        "Recuperando sesión y consultando estadísticas...";
+
+      try {
+        await apiGet("/me", savedKey);
+
+        await loadDashboard(savedKey);
+
+        showConnectedState();
+
+        status.textContent =
+          "Sesión recuperada correctamente. " +
+          "Puedes consultar las demás páginas administrativas.";
+
+      } catch (error) {
+        console.error("No se pudo recuperar la sesión:", error);
+
+        sessionStorage.removeItem(SESSION_KEY);
+
+        dashboard.classList.add("hidden");
+        disconnectButton.classList.add("hidden");
+
+        showError(error);
+
+      } finally {
+        button.disabled = false;
+      }
     }
-  });
-})();
-</script>
+
+    // Iniciar la página.
+    restoreSession();
+
+  })();
+  </script>
+
   <script src="./js/admin.js"></script>
+
 </body>
 </html>
