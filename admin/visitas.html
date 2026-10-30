@@ -1,0 +1,235 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#173c35">
+  <title>Histórico de visitas | Europa + Marruecos 2026</title>
+
+  <link rel="stylesheet" href="./css/admin.css">
+
+  <style>
+    .history-chart {
+      display: flex;
+      align-items: end;
+      gap: 8px;
+      min-height: 230px;
+      padding: 20px 8px 8px;
+      border-bottom: 1px solid #dedfd5;
+      overflow-x: auto;
+    }
+
+    .chart-column {
+      flex: 1;
+      min-width: 35px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: end;
+      height: 200px;
+      gap: 7px;
+    }
+
+    .chart-value {
+      font-size: .75rem;
+      color: #68756f;
+    }
+
+    .chart-bar {
+      width: 100%;
+      max-width: 42px;
+      min-height: 3px;
+      background: #28594d;
+      border-radius: 6px 6px 0 0;
+    }
+
+    .chart-label {
+      font-size: .72rem;
+      color: #68756f;
+      white-space: nowrap;
+    }
+
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    .history-table th,
+    .history-table td {
+      padding: 12px 10px;
+      text-align: left;
+      border-bottom: 1px solid #dedfd5;
+    }
+
+    .history-table th {
+      color: #173c35;
+      background: #f2f5ef;
+    }
+
+    .period-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 16px 0;
+    }
+
+    .period-buttons button {
+      margin: 0;
+      background: #e5e9e2;
+      color: #173c35;
+    }
+
+    .period-buttons button.active {
+      background: #173c35;
+      color: white;
+    }
+
+    .refresh-button {
+      margin-top: 0;
+    }
+
+    .history-status {
+      margin: 12px 0;
+      color: #68756f;
+      font-size: .92rem;
+    }
+
+    .table-container {
+      overflow-x: auto;
+    }
+
+    @media (max-width: 520px) {
+      .history-table th,
+      .history-table td {
+        padding: 9px 7px;
+        font-size: .88rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div class="header-inner">
+      <div class="eyebrow">Europa + Marruecos · 2026</div>
+      <h1>Panel administrativo</h1>
+      <p>Histórico de visitas del itinerario y del mapa del viaje.</p>
+    </div>
+  </header>
+
+  <main>
+
+    <nav class="navigation" aria-label="Navegación administrativa">
+      <a href="./index.html">Resumen general</a>
+      <a href="./visitas.html">Histórico de visitas</a>
+      <a href="./mapa-visitas.html">Procedencia geográfica</a>
+    </nav>
+
+    <section class="panel">
+
+      <h2>Histórico de visitas</h2>
+
+      <p class="note">
+        Consulta la evolución de visitantes registrados
+        durante los últimos 30 días.
+      </p>
+
+      <div id="historyStatus" class="history-status" role="status">
+        Comprobando sesión...
+      </div>
+
+      <div class="period-buttons">
+        <button type="button" data-period="day" class="active">
+          Diario
+        </button>
+
+        <button type="button" data-period="week">
+          Semanal
+        </button>
+
+        <button type="button" data-period="month">
+          Mensual
+        </button>
+      </div>
+
+      <button
+        id="refreshHistory"
+        class="refresh-button"
+        type="button"
+      >
+        Actualizar estadísticas
+      </button>
+
+    </section>
+
+    <section class="panel">
+
+      <h2>Indicadores del periodo</h2>
+
+      <div class="metrics">
+
+        <div class="metric">
+          <span>Visitantes registrados</span>
+          <strong id="periodVisits">—</strong>
+        </div>
+
+        <div class="metric">
+          <span>Páginas con actividad</span>
+          <strong id="periodPages">—</strong>
+        </div>
+
+      </div>
+
+    </section>
+
+    <section class="panel">
+
+      <h2>Evolución de visitantes</h2>
+
+      <p class="note" id="chartDescription">
+        Visitantes registrados por día.
+      </p>
+
+      <div id="visitsChart" class="history-chart">
+        Esperando estadísticas...
+      </div>
+
+    </section>
+
+    <section class="panel">
+
+      <h2>Detalle del histórico</h2>
+
+      <div class="table-container">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>Fecha / periodo</th>
+              <th>Visitantes</th>
+            </tr>
+          </thead>
+
+          <tbody id="visitsDetail">
+            <tr>
+              <td colspan="2">Esperando estadísticas...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </section>
+
+    <footer>
+      Europa + Marruecos 2026 · Administración privada
+    </footer>
+
+  </main>
+
+  <script src="./js/admin.js"></script>
+  <script src="./js/visitas.js"></script>
+
+</body>
+</html>
