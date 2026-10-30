@@ -8,139 +8,52 @@
 
   <title>Procedencia geográfica | Europa + Marruecos 2026</title>
 
+  <link rel="stylesheet" href="./css/admin.css">
+
   <style>
-    :root {
-      --green: #173c35;
-      --green-light: #28594d;
-      --cream: #f7f4ec;
-      --paper: #fffdf8;
-      --gold: #bd9656;
-      --text: #25332e;
-      --muted: #68756f;
-      --border: #dedfd5;
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      color: var(--text);
-      background: var(--cream);
-      font-family: Arial, Helvetica, sans-serif;
-      line-height: 1.5;
-    }
-
-    header {
-      padding: 26px 20px;
-      color: white;
-      background: linear-gradient(135deg, var(--green), var(--green-light));
-    }
-
-    .header-inner, main {
-      width: 100%;
-      max-width: 1100px;
-      margin: auto;
-    }
-
-    .eyebrow {
-      color: #e3c995;
-      font-size: .8rem;
-      font-weight: bold;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-    }
-
-    h1 { margin: 8px 0; }
-
-    header p {
-      margin-bottom: 0;
-      color: #edf2ed;
-    }
-
-    main { padding: 24px 16px 44px; }
-
-    .navigation {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 9px;
-      margin-bottom: 22px;
-    }
-
-    .navigation a {
-      display: inline-block;
-      padding: 10px 14px;
-      color: var(--green);
-      background: var(--paper);
-      border: 1px solid var(--border);
-      border-radius: 9px;
-      text-decoration: none;
-      font-size: .92rem;
-      font-weight: bold;
-    }
-
-    .navigation a.active,
-    .navigation a:hover {
-      color: white;
-      background: var(--green);
-      border-color: var(--green);
-    }
-
-    .panel {
-      margin-bottom: 20px;
-      padding: 22px;
-      background: var(--paper);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      box-shadow: 0 8px 24px rgba(23,60,53,.06);
-    }
-
-    h2 {
-      margin-top: 0;
-      color: var(--green);
-    }
-
-    .note {
-      color: var(--muted);
+    .geo-status {
+      margin: 12px 0;
+      color: var(--muted, #68756f);
       font-size: .92rem;
     }
 
-    .metrics {
+    .geo-bars {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-      gap: 14px;
-      margin-top: 18px;
+      gap: 16px;
+      margin-top: 20px;
     }
 
-    .metric {
-      padding: 18px;
+    .geo-item {
+      padding: 14px;
       background: #f2f5ef;
-      border-radius: 12px;
+      border-radius: 10px;
     }
 
-    .metric span {
-      display: block;
-      color: var(--muted);
-      font-size: .9rem;
-    }
-
-    .metric strong {
-      display: block;
-      margin-top: 8px;
-      color: var(--green);
-      font-size: 1.8rem;
-    }
-
-    .map-placeholder {
+    .geo-heading {
       display: flex;
-      min-height: 360px;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      color: var(--muted);
-      background: #edf1e9;
-      border: 1px dashed #bdc9c0;
-      border-radius: 12px;
-      text-align: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-weight: bold;
+    }
+
+    .geo-track {
+      height: 10px;
+      margin-top: 10px;
+      overflow: hidden;
+      background: #dce4da;
+      border-radius: 20px;
+    }
+
+    .geo-fill {
+      height: 100%;
+      background: #28594d;
+      border-radius: 20px;
+    }
+
+    .geo-code {
+      margin-top: 4px;
+      color: #68756f;
+      font-size: .82rem;
     }
 
     .table-wrapper {
@@ -156,11 +69,11 @@
 
     th, td {
       padding: 13px 12px;
-      border-bottom: 1px solid var(--border);
+      border-bottom: 1px solid #dedfd5;
     }
 
     th {
-      color: var(--green);
+      color: #173c35;
       background: #f2f5ef;
     }
 
@@ -168,19 +81,15 @@
       text-align: right;
     }
 
-    footer {
-      padding: 10px;
-      color: var(--muted);
-      text-align: center;
-      font-size: .85rem;
+    .geo-refresh {
+      margin-top: 12px;
     }
 
-    @media (max-width: 600px) {
-      .panel { padding: 17px; }
-      .navigation a { flex: 1 1 100%; text-align: center; }
+    .geo-refresh:disabled {
+      opacity: .6;
+      cursor: wait;
     }
   </style>
-  <link rel="stylesheet" href="./css/admin.css">
 </head>
 
 <body>
@@ -202,13 +111,16 @@
     </nav>
 
     <section class="panel">
+
       <h2>Origen de los visitantes</h2>
+
       <p class="note">
-        Consulta los países y ciudades que GoatCounter pueda identificar
-        de manera aproximada a partir de sus estadísticas.
+        Países y regiones identificados por las estadísticas
+        disponibles en GoatCounter.
       </p>
 
       <div class="metrics">
+
         <div class="metric">
           <span>Países identificados</span>
           <strong id="countryCount">—</strong>
@@ -220,35 +132,47 @@
         </div>
 
         <div class="metric">
-          <span>Ciudades identificadas</span>
-          <strong id="cityCount">—</strong>
+          <span>Regiones identificadas</span>
+          <strong id="regionCount">—</strong>
         </div>
+
       </div>
+
+      <div id="geoStatus" class="geo-status" role="status">
+        Comprobando sesión...
+      </div>
+
+      <button
+        id="refreshGeo"
+        class="geo-refresh"
+        type="button"
+      >
+        Actualizar procedencia
+      </button>
+
     </section>
 
     <section class="panel">
-      <h2>Mapa de procedencia</h2>
+
+      <h2>Distribución geográfica</h2>
+
       <p class="note">
-        Visualización geográfica de los países desde los cuales se
-        registraron visitas.
+        Representación comparativa de los visitantes por país.
+        Las barras reflejan los conteos proporcionados por GoatCounter.
       </p>
 
-      <div id="visitorsMap" class="map-placeholder">
-        <div>
-          <strong>Mapa geográfico pendiente de integración</strong>
-          <p>
-            Aquí mostraremos los países identificados y su distribución
-            geográfica.
-          </p>
-        </div>
+      <div id="visitorsMap" class="geo-bars">
+        Esperando información geográfica...
       </div>
+
     </section>
 
     <section class="panel">
+
       <h2>Países de procedencia</h2>
+
       <p class="note">
-        El detalle se completará cuando integremos los datos geográficos
-        disponibles en GoatCounter.
+        Países ordenados de mayor a menor cantidad de visitantes.
       </p>
 
       <div class="table-wrapper">
@@ -262,41 +186,41 @@
 
           <tbody id="countryTable">
             <tr>
-              <td colspan="2">
-                Información geográfica pendiente de integración.
-              </td>
+              <td colspan="2">Esperando información...</td>
             </tr>
           </tbody>
         </table>
       </div>
+
     </section>
 
     <section class="panel">
-      <h2>Ciudades identificadas</h2>
+
+      <h2>Regiones identificadas</h2>
+
       <p class="note">
-        Las ciudades aparecerán únicamente cuando la fuente estadística
-        proporcione ese nivel de detalle.
+        Se muestran únicamente las subdivisiones geográficas
+        que proporciona GoatCounter. No se interpretan como ciudades.
       </p>
 
       <div class="table-wrapper">
         <table>
           <thead>
             <tr>
-              <th>Ciudad</th>
+              <th>Región</th>
               <th>País</th>
               <th>Visitas</th>
             </tr>
           </thead>
 
-          <tbody id="cityTable">
+          <tbody id="regionTable">
             <tr>
-              <td colspan="3">
-                Información de ciudades pendiente de integración.
-              </td>
+              <td colspan="3">Esperando información...</td>
             </tr>
           </tbody>
         </table>
       </div>
+
     </section>
 
     <footer>
@@ -304,6 +228,9 @@
     </footer>
 
   </main>
-<script src="./js/admin.js"></script>
+
+  <script src="./js/admin.js"></script>
+  <script src="./js/mapa-visitas.js"></script>
+
 </body>
 </html>
