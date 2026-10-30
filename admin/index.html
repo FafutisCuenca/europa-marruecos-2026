@@ -289,7 +289,7 @@
       await apiGet("/me", key);
 
       const total = await apiGet("/stats/total", key);
-      const pages = await apiGet("/hits", key);
+      const pages = await apiGet("/stats/hits", key);
 
       document.getElementById("totalVisits").textContent =
         Number.isFinite(total.total)
