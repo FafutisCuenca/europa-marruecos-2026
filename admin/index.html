@@ -1,0 +1,317 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#173c35">
+  <title>Administración | Europa + Marruecos 2026</title>
+
+  <style>
+    :root {
+      --green: #173c35;
+      --green-light: #28594d;
+      --cream: #f7f4ec;
+      --paper: #fffdf8;
+      --gold: #bd9656;
+      --text: #25332e;
+      --muted: #68756f;
+      --border: #dedfd5;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      background: var(--cream);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.5;
+    }
+
+    header {
+      padding: 28px 20px;
+      color: white;
+      background: linear-gradient(135deg, var(--green), var(--green-light));
+    }
+
+    header, main { width: 100%; }
+
+    .header-inner, main {
+      max-width: 1000px;
+      margin: auto;
+    }
+
+    .eyebrow {
+      color: #e3c995;
+      font-size: .8rem;
+      font-weight: bold;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    h1 { margin: 8px 0; }
+    header p { color: #edf2ed; }
+
+    main { padding: 24px 16px 44px; }
+
+    .panel {
+      margin-bottom: 20px;
+      padding: 22px;
+      background: var(--paper);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 8px 24px rgba(23,60,53,.07);
+    }
+
+    h2 { margin-top: 0; color: var(--green); }
+
+    label {
+      display: block;
+      margin: 14px 0 6px;
+      font-weight: bold;
+    }
+
+    input {
+      width: 100%;
+      min-height: 46px;
+      padding: 11px;
+      border: 1px solid #bdc9c0;
+      border-radius: 9px;
+      font: inherit;
+    }
+
+    button {
+      min-height: 44px;
+      margin-top: 14px;
+      padding: 10px 16px;
+      color: white;
+      background: var(--green);
+      border: 0;
+      border-radius: 9px;
+      font: inherit;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    button:disabled { opacity: .6; cursor: wait; }
+
+    .note, .status {
+      color: var(--muted);
+      font-size: .92rem;
+    }
+
+    .status { margin-top: 14px; overflow-wrap: anywhere; }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .metric {
+      padding: 18px;
+      background: #f2f5ef;
+      border-radius: 12px;
+    }
+
+    .metric span { display: block; color: var(--muted); }
+    .metric strong { display: block; margin-top: 8px; font-size: 1.8rem; }
+
+    pre {
+      padding: 14px;
+      overflow: auto;
+      background: #f2f5ef;
+      border-radius: 10px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .hidden { display: none; }
+
+    footer {
+      padding: 10px;
+      color: var(--muted);
+      text-align: center;
+      font-size: .85rem;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="header-inner">
+      <div class="eyebrow">Europa + Marruecos · 2026</div>
+      <h1>Panel administrativo</h1>
+      <p>Estadísticas de uso del itinerario y del mapa del viaje.</p>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>Conexión con GoatCounter</h2>
+      <p class="note">
+        Introduce tu clave API de lectura. Se utilizará solo en esta
+        página y no se guardará en el navegador.
+      </p>
+
+      <form id="connectionForm">
+        <label for="apiKey">Clave API</label>
+        <input
+          id="apiKey"
+          type="password"
+          autocomplete="off"
+          required
+          placeholder="Introduce tu clave API"
+        >
+        <button id="connectButton" type="submit">
+          Verificar conexión
+        </button>
+      </form>
+
+      <div id="connectionStatus" class="status" role="status"
+           aria-live="polite">Esperando la conexión.</div>
+    </section>
+
+    <section id="dashboard" class="panel hidden">
+      <h2>Resumen de visitas</h2>
+      <p class="note">
+        Datos proporcionados por GoatCounter. Las cifras dependen
+        del periodo consultado por la API.
+      </p>
+
+      <div class="metrics">
+        <div class="metric">
+          <span>Visitas registradas</span>
+          <strong id="totalVisits">—</strong>
+        </div>
+        <div class="metric">
+          <span>Páginas registradas</span>
+          <strong id="pageCount">—</strong>
+        </div>
+      </div>
+
+      <h2 style="margin-top:24px">Respuesta de la API</h2>
+      <pre id="apiOutput">Los datos aparecerán tras verificar la conexión.</pre>
+    </section>
+
+    <footer>
+      Europa + Marruecos 2026 · Administración privada
+    </footer>
+  </main>
+
+  <script>
+    (() => {
+      const API = "https://ljcuenca.goatcounter.com/api/v0";
+
+      const form = document.getElementById("connectionForm");
+      const keyInput = document.getElementById("apiKey");
+      const button = document.getElementById("connectButton");
+      const status = document.getElementById("connectionStatus");
+      const dashboard = document.getElementById("dashboard");
+      const output = document.getElementById("apiOutput");
+
+      async function apiGet(path, key) {
+        const response = await fetch(API + path, {
+          method: "GET",
+          headers: {
+            "Authorization": "Bearer " + key,
+            "Content-Type": "application/json"
+          },
+          cache: "no-store"
+        });
+
+        const text = await response.text();
+        let data;
+
+        try {
+          data = JSON.parse(text);
+        } catch {
+          data = { message: text.slice(0, 500) };
+        }
+
+        if (!response.ok) {
+          const error = new Error(
+            "La API respondió HTTP " + response.status
+          );
+          error.status = response.status;
+          error.details = data;
+          throw error;
+        }
+
+        return data;
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const key = keyInput.value.trim();
+        if (!key) return;
+
+        button.disabled = true;
+        status.textContent = "Verificando clave y consultando datos...";
+        dashboard.classList.add("hidden");
+
+        try {
+          // Verificar que la clave sea válida.
+          await apiGet("/me", key);
+
+          // Consultar el total de visitas.
+          const total = await apiGet("/stats/total", key);
+
+          // Consultar páginas registradas.
+          const pages = await apiGet("/hits", key);
+
+          document.getElementById("totalVisits").textContent =
+            Number.isFinite(total.total)
+              ? total.total.toLocaleString("es-MX")
+              : "Disponible en el detalle";
+
+          const pageList = Array.isArray(pages.hits)
+            ? pages.hits
+            : Array.isArray(pages)
+              ? pages
+              : [];
+
+          document.getElementById("pageCount").textContent =
+            pageList.length.toLocaleString("es-MX");
+
+          output.textContent = JSON.stringify(
+            { total, pages },
+            null,
+            2
+          );
+
+          dashboard.classList.remove("hidden");
+          status.textContent =
+            "Conexión correcta. Estadísticas recibidas.";
+
+          // Vaciar el campo tras la consulta.
+          keyInput.value = "";
+        } catch (error) {
+          console.error("Error de conexión con GoatCounter:", error);
+
+          let message = error.message;
+
+          if (error instanceof TypeError) {
+            message =
+              "No fue posible acceder a la API desde el navegador. " +
+              "Puede ser un bloqueo CORS o un problema de red.";
+          } else if (error.status === 401) {
+            message = "Clave no válida o no enviada correctamente.";
+          } else if (error.status === 403) {
+            message = "La clave no tiene permiso para esta consulta.";
+          }
+
+          status.textContent =
+            message + " Revisa el error y vuelve a intentarlo.";
+          keyInput.value = "";
+        } finally {
+          button.disabled = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
