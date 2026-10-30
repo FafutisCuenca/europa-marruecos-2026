@@ -224,132 +224,128 @@
     </footer>
   </main>
 
-  <script>
-    (() => {
-      const API = "https://ljcuenca.goatcounter.com/api/v0";
 
-      const form = document.getElementById("connectionForm");
-      const keyInput = document.getElementById("apiKey");
-      const button = document.getElementById("connectButton");
-      const status = document.getElementById("connectionStatus");
-      const dashboard = document.getElementById("dashboard");
-      const output = document.getElementById("apiOutput");
+<script>
+(() => {
+  const API = "https://ljcuenca.goatcounter.com/api/v0";
 
-async function apiGet(path, key) {
-  const response = await fetch(API + path, {
-    method: "GET",
-    headers: {
-      "Authorization": "Bearer " + key,
-      "Accept": "application/json"
-    },
-    cache: "no-store"
+  const form = document.getElementById("connectionForm");
+  const keyInput = document.getElementById("apiKey");
+  const button = document.getElementById("connectButton");
+  const toggleButton = document.getElementById("toggleApiKey");
+  const status = document.getElementById("connectionStatus");
+  const dashboard = document.getElementById("dashboard");
+  const output = document.getElementById("apiOutput");
+
+  // Mostrar u ocultar la clave API.
+  toggleButton.addEventListener("click", () => {
+    const mostrar = keyInput.type === "password";
+
+    keyInput.type = mostrar ? "text" : "password";
+    toggleButton.textContent = mostrar ? "Ocultar" : "Mostrar";
   });
 
-  const text = await response.text();
+  // Consultar la API de GoatCounter.
+  async function apiGet(path, key) {
+    const response = await fetch(API + path, {
+      method: "GET",
+      headers: {
+        "Authorization": "Bearer " + key,
+        "Accept": "application/json"
+      },
+      cache: "no-store"
+    });
 
-  if (!response.ok) {
-    throw new Error(
-      "HTTP " + response.status + ": " + text.slice(0, 300)
-    );
+    const responseText = await response.text();
+
+    if (!response.ok) {
+      const error = new Error(
+        "HTTP " + response.status + ": " +
+        responseText.slice(0, 300)
+      );
+      error.status = response.status;
+      throw error;
+    }
+
+    try {
+      return JSON.parse(responseText);
+    } catch {
+      throw new Error("La API no devolvió JSON válido.");
+    }
   }
 
-  try {
-    return JSON.parse(text);
-  } catch {
-    throw new Error("La API no devolvió JSON válido.");
-  }
-}
+  // Verificar conexión.
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
 
-        if (!response.ok) {
-          const error = new Error(
-            "La API respondió HTTP " + response.status
-          );
-          error.status = response.status;
-          error.details = data;
-          throw error;
-        }
+    const key = keyInput.value.trim();
+    if (!key) return;
 
-        return data;
+    button.disabled = true;
+    status.textContent = "Verificando clave y consultando datos...";
+    dashboard.classList.add("hidden");
+
+    try {
+      await apiGet("/me", key);
+
+      const total = await apiGet("/stats/total", key);
+      const pages = await apiGet("/hits", key);
+
+      document.getElementById("totalVisits").textContent =
+        Number.isFinite(total.total)
+          ? total.total.toLocaleString("es-MX")
+          : "Disponible en el detalle";
+
+      const pageList = Array.isArray(pages.hits)
+        ? pages.hits
+        : Array.isArray(pages)
+          ? pages
+          : [];
+
+      document.getElementById("pageCount").textContent =
+        pageList.length.toLocaleString("es-MX");
+
+      output.textContent = JSON.stringify(
+        { total, pages },
+        null,
+        2
+      );
+
+      dashboard.classList.remove("hidden");
+      status.textContent =
+        "Conexión correcta. Estadísticas recibidas.";
+
+      keyInput.value = "";
+      keyInput.type = "password";
+      toggleButton.textContent = "Mostrar";
+
+    } catch (error) {
+      console.error("Error de conexión con GoatCounter:", error);
+
+      let message = error.message;
+
+      if (error instanceof TypeError) {
+        message =
+          "No fue posible acceder a la API desde el navegador. " +
+          "Puede ser un bloqueo CORS o un problema de red.";
+      } else if (error.status === 401) {
+        message = "Clave no válida o no enviada correctamente.";
+      } else if (error.status === 403) {
+        message = "La clave no tiene permiso para esta consulta.";
       }
 
-      form.addEventListener("submit", async (event) => {
-        event.preventDefault();
+      status.textContent =
+        message + " Revisa el error y vuelve a intentarlo.";
 
-        const key = keyInput.value.trim();
-        if (!key) return;
+      keyInput.value = "";
+      keyInput.type = "password";
+      toggleButton.textContent = "Mostrar";
 
-        button.disabled = true;
-        status.textContent = "Verificando clave y consultando datos...";
-        dashboard.classList.add("hidden");
-
-        try {
-          // Verificar que la clave sea válida.
-          await apiGet("/me", key);
-
-          // Consultar el total de visitas.
-          const total = await apiGet("/stats/total", key);
-
-          // Consultar páginas registradas.
-          const pages = await apiGet("/hits", key);
-
-          document.getElementById("totalVisits").textContent =
-            Number.isFinite(total.total)
-              ? total.total.toLocaleString("es-MX")
-              : "Disponible en el detalle";
-
-          const pageList = Array.isArray(pages.hits)
-            ? pages.hits
-            : Array.isArray(pages)
-              ? pages
-              : [];
-
-          document.getElementById("pageCount").textContent =
-            pageList.length.toLocaleString("es-MX");
-
-          output.textContent = JSON.stringify(
-            { total, pages },
-            null,
-            2
-          );
-
-          dashboard.classList.remove("hidden");
-          status.textContent =
-            "Conexión correcta. Estadísticas recibidas.";
-
-          // Vaciar el campo tras la consulta.
-          keyInput.value = "";
-        } catch (error) {
-          console.error("Error de conexión con GoatCounter:", error);
-
-          let message = error.message;
-
-          if (error instanceof TypeError) {
-            message =
-              "No fue posible acceder a la API desde el navegador. " +
-              "Puede ser un bloqueo CORS o un problema de red.";
-          } else if (error.status === 401) {
-            message = "Clave no válida o no enviada correctamente.";
-          } else if (error.status === 403) {
-            message = "La clave no tiene permiso para esta consulta.";
-          }
-
-          status.textContent =
-            message + " Revisa el error y vuelve a intentarlo.";
-          keyInput.value = "";
-        } finally {
-          button.disabled = false;
-        }
-      });
-    })();
-    const apiKeyInput = document.getElementById("apiKey");
-const toggleApiKeyButton = document.getElementById("toggleApiKey");
-
-toggleApiKeyButton.addEventListener("click", () => {
-  const mostrar = apiKeyInput.type === "password";
-
-  apiKeyInput.type = mostrar ? "text" : "password";
-  toggleApiKeyButton.textContent = mostrar ? "Ocultar" : "Mostrar";
-});
-  </script>
+    } finally {
+      button.disabled = false;
+    }
+  });
+})();
+</script>
 </body>
 </html>
