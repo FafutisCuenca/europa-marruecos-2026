@@ -343,11 +343,55 @@
       document.getElementById("pageCount").textContent =
         pageList.length.toLocaleString("es-MX");
 
-      output.textContent = JSON.stringify(
-        { total, pages },
-        null,
-        2
-      );
+     const topPages = document.getElementById("topPages");
+
+topPages.replaceChildren();
+
+const sortedPages = [...pageList].sort(
+  (a, b) => (b.count || 0) - (a.count || 0)
+);
+
+const maxCount = Math.max(
+  1,
+  ...sortedPages.map(page => Number(page.count) || 0)
+);
+
+sortedPages.slice(0, 10).forEach(page => {
+  const item = document.createElement("div");
+  item.className = "page-item";
+
+  const heading = document.createElement("div");
+  heading.className = "page-heading";
+
+  const name = document.createElement("span");
+  name.textContent = page.title || page.path || "Página";
+
+  const count = document.createElement("span");
+  count.textContent = Number(page.count || 0).toLocaleString("es-MX");
+
+  heading.append(name, count);
+
+  const path = document.createElement("div");
+  path.className = "page-path";
+  path.textContent = page.path || "";
+
+  const bar = document.createElement("div");
+  bar.className = "page-bar";
+
+  const fill = document.createElement("div");
+  fill.className = "page-bar-fill";
+
+  fill.style.width =
+    Math.min(100, (Number(page.count || 0) / maxCount) * 100) + "%";
+
+  bar.appendChild(fill);
+  item.append(heading, path, bar);
+  topPages.appendChild(item);
+});
+
+if (sortedPages.length === 0) {
+  topPages.textContent = "Todavía no hay páginas registradas.";
+}
 
       dashboard.classList.remove("hidden");
       status.textContent =
