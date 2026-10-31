@@ -1602,7 +1602,9 @@ function normalizeBitacoraSearch(value) {
     .trim();
 }
 
+
 function renderBitacoraAddResults() {
+
   const input = document.getElementById("bitacoraAddSearch");
   const results = document.getElementById("bitacoraAddResults");
   const selected = document.getElementById("bitacoraSelected");
@@ -1617,17 +1619,26 @@ function renderBitacoraAddResults() {
 
   if (!query) return;
 
+  // Buscar en TODO el catálogo maestro, no en el itinerario.
   const matches = getAllBitacoraLocations()
     .filter(location => {
-      const text = normalizeBitacoraSearch(
-        `${location.name} ${location.city || ""} ${location.country || ""}`
-      );
 
-      return text.includes(query);
+      const searchableText = [
+        location.name,
+        location.city,
+        location.country,
+        location.address,
+        location.type,
+        location.locationStatus
+      ].join(" ");
+
+      return normalizeBitacoraSearch(searchableText)
+        .includes(query);
     })
-    .slice(0, 12);
+    .slice(0, 15);
 
   if (matches.length) {
+
     results.innerHTML = matches.map(location => `
       <button
         type="button"
@@ -1639,6 +1650,9 @@ function renderBitacoraAddResults() {
           ${escapeHtml(location.city || "Sin ciudad")}
           · ${escapeHtml(location.country || "Sin país")}
         </span>
+        <span>
+          ${escapeHtml(location.address || getBitacoraCategory(location))}
+        </span>
       </button>
     `).join("");
 
@@ -1647,7 +1661,7 @@ function renderBitacoraAddResults() {
 
   results.innerHTML = `
     <div class="empty-state">
-      No encontramos coincidencias en el catálogo.
+      No encontramos coincidencias en el catálogo general.
       Puedes agregar este lugar como nuevo.
     </div>
   `;
@@ -1956,7 +1970,6 @@ function renderBitacora() {
 
 }
 
-function updateBitacoraVisit(id, checked) {
 
 function updateBitacoraVisit(id, checked) {
 
@@ -1971,6 +1984,122 @@ function updateBitacoraVisit(id, checked) {
   saveBitacoraStorage();
   renderBitacora();
 }
+
+function updateBitacoraDate(id, date) {
+
+  if (!bitacoraData.visited[id]) {
+    bitacoraData.visited[id] = {
+      date: date || getLocalDate()
+    };
+  } else {
+    bitacoraData.visited[id].date = date;
+  }
+
+  saveBitacoraStorage();
+  renderBitacora();
+}
+
+async function loadBitacora() {
+
+  try {
+
+    loadBitacoraStorage();
+
+    const response = await fetch("./data/locations.json", {
+      cache: "no-cache"
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (!Array.isArray(data.locations)) {
+      throw new Error("El catálogo no contiene una lista de lugares.");
+    }
+
+    bitacoraLocations = data.locations.filter(location =>
+      location && location.id && location.name
+    );
+
+    renderBitacora();
+
+    bitacoraStatus.textContent =
+      `Catálogo general cargado: ${bitacoraLocations.length} lugares disponibles.`;
+
+  } catch (error) {
+
+    console.error("No se pudo cargar la bitácora:", error);
+
+    bitacoraStatus.textContent =
+      "No se pudo cargar data/locations.json. Verifica la ruta y el formato del archivo.";
+
+    bitacoraList.innerHTML = `
+      <div class="empty-state">
+        No fue posible cargar el catálogo general de lugares.
+        La agenda diaria continúa funcionando independientemente.
+      </div>
+    `;
+  }
+}
+
+// Marcar o desmarcar lugares visitados.
+bitacoraList.addEventListener("change", function(event) {
+
+  if (event.target.classList.contains("bitacora-visited")) {
+    updateBitacoraVisit(
+      event.target.dataset.id,
+      event.target.checked
+    );
+  }
+
+  if (event.target.classList.contains("bitacora-date")) {
+    updateBitacoraDate(
+      event.target.dataset.id,
+      event.target.value
+    );
+  }
+
+});
+
+// Búsqueda y filtros de la lista general.
+document.getElementById("bitacoraSearch")
+  .addEventListener("input", renderBitacora);
+
+document.getElementById("bitacoraCityFilter")
+  .addEventListener("change", renderBitacora);
+
+document.getElementById("bitacoraStatusFilter")
+  .addEventListener("change", renderBitacora);
+
+// BUSCADOR GLOBAL PARA INCORPORAR LUGARES.
+document.getElementById("bitacoraAddSearch")
+  .addEventListener("input", renderBitacoraAddResults);
+
+// Seleccionar una coincidencia del catálogo.
+document.getElementById("bitacoraAddResults")
+  .addEventListener("click", function(event) {
+
+    const button = event.target.closest(".bitacora-result");
+
+    if (!button) return;
+
+    selectBitacoraLocation(button.dataset.locationId);
+
+  });
+
+// Confirmar el registro de visita.
+document.getElementById("bitacoraConfirmAdd")
+  .addEventListener("click", confirmBitacoraVisit);
+
+// Incorporar un lugar que no existe en el catálogo.
+document.getElementById("bitacoraCreateCustom")
+  .addEventListener("click", createCustomBitacoraLocation);
+
+// Cargar el catálogo independientemente del itinerario.
+loadBitacora();
+
 
 function updateBitacoraDate(id, date) {
 
