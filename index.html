@@ -870,59 +870,72 @@
     <div class="empty-state">Preparando catálogo de lugares...</div>
   </div>
 
-  <div class="section" style="margin-top:30px">
 
-    <h3 class="section-heading">Agregar un lugar espontáneo</h3>
+<div class="bitacora-add">
+  <h3>Agregar un lugar a mi bitácora</h3>
+  <p class="section-description">
+    Busca cualquier lugar del catálogo y selecciónalo para registrarlo como visitado.
+  </p>
 
-    <p class="section-description">
-      ¿Descubrimos un restaurante, una plaza o algún sitio que no estaba
-      contemplado? Podemos incorporarlo a nuestra bitácora.
-    </p>
-
-    <form id="bitacoraForm" class="bitacora-form">
-
-      <h3>Nuevo lugar</h3>
-
-      <input
-        type="text"
-        id="newPlaceName"
-        placeholder="Nombre del lugar"
-        required
-        maxlength="120"
-      >
-
-      <input
-        type="text"
-        id="newPlaceCity"
-        placeholder="Ciudad o región"
-        required
-        maxlength="80"
-      >
-
-      <select id="newPlaceCountry" required>
-        <option value="España">España</option>
-        <option value="Marruecos">Marruecos</option>
-        <option value="Otro">Otro</option>
-      </select>
-
-      <input
-        type="date"
-        id="newPlaceDate"
-        aria-label="Fecha de visita"
-      >
-
-      <button type="submit" class="button">
-        Agregar a mi bitácora
-      </button>
-
-    </form>
-
-    <p class="bitacora-note">
-      Los lugares agregados y las visitas se guardan localmente
-      en este dispositivo.
-    </p>
-
+  <div class="bitacora-search-add">
+    <input
+      type="search"
+      id="bitacoraAddSearch"
+      placeholder="Escribe el nombre de un lugar..."
+      autocomplete="off"
+      aria-label="Buscar un lugar para agregar a la bitácora"
+    >
+    <div id="bitacoraAddResults" class="bitacora-add-results"></div>
   </div>
+
+  <div id="bitacoraSelected" class="bitacora-selected" hidden>
+    <strong id="bitacoraSelectedName"></strong>
+    <p id="bitacoraSelectedMeta"></p>
+
+    <label for="bitacoraAddDate">Fecha de visita (opcional)</label>
+    <input type="date" id="bitacoraAddDate">
+
+    <button type="button" class="button" id="bitacoraConfirmAdd">
+      Marcar como visitado
+    </button>
+  </div>
+
+  <div id="bitacoraCustom" class="bitacora-custom" hidden>
+    <p>
+      No encontramos este lugar en nuestro catálogo.
+      Puedes incorporarlo como un lugar nuevo.
+    </p>
+
+    <label for="bitacoraCustomCity">Ciudad o región</label>
+    <input
+      type="text"
+      id="bitacoraCustomCity"
+      placeholder="Ciudad o región"
+      maxlength="80"
+    >
+
+    <label for="bitacoraCustomCountry">País</label>
+    <select id="bitacoraCustomCountry">
+      <option value="España">España</option>
+      <option value="Marruecos">Marruecos</option>
+      <option value="Otro">Otro</option>
+    </select>
+
+    <label for="bitacoraCustomDate">Fecha de visita (opcional)</label>
+    <input type="date" id="bitacoraCustomDate">
+
+    <button type="button" class="button" id="bitacoraCreateCustom">
+      Agregar y marcar como visitado
+    </button>
+  </div>
+</div>
+
+<p class="bitacora-note">
+  Tus lugares y visitas se guardan localmente en este dispositivo.
+  La fecha de visita es opcional y podrás completarla posteriormente.
+</p>
+</div>
+
 
 </section>
     
