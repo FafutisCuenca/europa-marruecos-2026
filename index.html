@@ -707,6 +707,115 @@
     width: 100%;
   }
 }
+
+    
+/* Buscador para agregar lugares a la bitácora */
+
+.bitacora-add {
+  padding: 20px;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.bitacora-add h3 {
+  margin-top: 0;
+  color: var(--green);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.4rem;
+  font-weight: normal;
+}
+
+.bitacora-search-add input,
+.bitacora-selected input,
+.bitacora-custom input,
+.bitacora-custom select {
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: white;
+  color: var(--text);
+  font: inherit;
+}
+
+.bitacora-add-results {
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.bitacora-result {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: white;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.bitacora-result:hover {
+  background: #edf2eb;
+  border-color: var(--green-light);
+}
+
+.bitacora-result strong,
+.bitacora-result span {
+  display: block;
+}
+
+.bitacora-result span {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: .85rem;
+}
+
+.bitacora-selected,
+.bitacora-custom {
+  margin-top: 15px;
+  padding: 16px;
+  background: #edf2eb;
+  border: 1px solid #bdcdbd;
+  border-radius: 8px;
+}
+
+.bitacora-selected p,
+.bitacora-custom p {
+  color: var(--muted);
+  font-size: .9rem;
+}
+
+.bitacora-selected label,
+.bitacora-custom label {
+  display: block;
+  margin: 12px 0 5px;
+  font-size: .88rem;
+  font-weight: bold;
+}
+
+.bitacora-selected .button,
+.bitacora-custom .button {
+  width: 100%;
+  margin-top: 14px;
+  color: white;
+  background: var(--green);
+  border-color: var(--green);
+}
+
+.bitacora-add-results:empty {
+  display: none;
+}
+
+@media (max-width: 520px) {
+  .bitacora-add {
+    padding: 15px;
+  }
+}
+
+    
   </style>
 </head>
 
@@ -1483,15 +1592,183 @@ function getBitacoraLocationId(location) {
   return location.id;
 }
 
+let bitacoraSelectedLocation = null;
+
+function normalizeBitacoraSearch(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("es")
+    .trim();
+}
+
+function renderBitacoraAddResults() {
+  const input = document.getElementById("bitacoraAddSearch");
+  const results = document.getElementById("bitacoraAddResults");
+  const selected = document.getElementById("bitacoraSelected");
+  const custom = document.getElementById("bitacoraCustom");
+
+  const query = normalizeBitacoraSearch(input.value);
+
+  bitacoraSelectedLocation = null;
+  selected.hidden = true;
+  custom.hidden = true;
+  results.innerHTML = "";
+
+  if (!query) return;
+
+  const matches = getAllBitacoraLocations()
+    .filter(location => {
+      const text = normalizeBitacoraSearch(
+        `${location.name} ${location.city || ""} ${location.country || ""}`
+      );
+
+      return text.includes(query);
+    })
+    .slice(0, 12);
+
+  if (matches.length) {
+    results.innerHTML = matches.map(location => `
+      <button
+        type="button"
+        class="bitacora-result"
+        data-location-id="${escapeHtml(location.id)}"
+      >
+        <strong>${escapeHtml(location.name)}</strong>
+        <span>
+          ${escapeHtml(location.city || "Sin ciudad")}
+          · ${escapeHtml(location.country || "Sin país")}
+        </span>
+      </button>
+    `).join("");
+
+    return;
+  }
+
+  results.innerHTML = `
+    <div class="empty-state">
+      No encontramos coincidencias en el catálogo.
+      Puedes agregar este lugar como nuevo.
+    </div>
+  `;
+
+  custom.hidden = false;
+}
+
+function selectBitacoraLocation(id) {
+  const location = getAllBitacoraLocations()
+    .find(item => item.id === id);
+
+  if (!location) return;
+
+  bitacoraSelectedLocation = location;
+
+  document.getElementById("bitacoraSelectedName").textContent =
+    location.name;
+
+  document.getElementById("bitacoraSelectedMeta").textContent =
+    `${location.city || "Sin ciudad"} · ${location.country || "Sin país"}`;
+
+  document.getElementById("bitacoraAddDate").value =
+    bitacoraData.visited[id]?.date || "";
+
+  document.getElementById("bitacoraSelected").hidden = false;
+  document.getElementById("bitacoraCustom").hidden = true;
+  document.getElementById("bitacoraAddResults").innerHTML = "";
+}
+
+function confirmBitacoraVisit() {
+  if (!bitacoraSelectedLocation) return;
+
+  const id = bitacoraSelectedLocation.id;
+  const date = document.getElementById("bitacoraAddDate").value;
+
+  bitacoraData.visited[id] = { date };
+
+  if (!saveBitacoraStorage()) return;
+
+  document.getElementById("bitacoraAddSearch").value = "";
+  document.getElementById("bitacoraAddDate").value = "";
+  document.getElementById("bitacoraSelected").hidden = true;
+
+  bitacoraSelectedLocation = null;
+
+  renderBitacora();
+
+  bitacoraStatus.textContent =
+    "Lugar agregado correctamente a tus visitas.";
+}
+
+function createCustomBitacoraLocation() {
+  const name = document.getElementById("bitacoraAddSearch")
+    .value.trim();
+
+  const city = document.getElementById("bitacoraCustomCity")
+    .value.trim();
+
+  const country = document.getElementById("bitacoraCustomCountry")
+    .value;
+
+  const date = document.getElementById("bitacoraCustomDate")
+    .value;
+
+  if (!name || !city) {
+    bitacoraStatus.textContent =
+      "Escribe el nombre del lugar y su ciudad.";
+    return;
+  }
+
+  const duplicate = getAllBitacoraLocations().find(location =>
+    normalizeBitacoraSearch(location.name) ===
+      normalizeBitacoraSearch(name) &&
+    normalizeBitacoraSearch(location.city) ===
+      normalizeBitacoraSearch(city)
+  );
+
+  if (duplicate) {
+    selectBitacoraLocation(duplicate.id);
+    return;
+  }
+
+  const id = "espontaneo-" + Date.now();
+
+  const newLocation = {
+    id,
+    name,
+    city,
+    country,
+    type: "custom",
+    locationStatus: "user_added"
+  };
+
+  bitacoraData.custom.push(newLocation);
+
+  bitacoraData.visited[id] = { date };
+
+  if (!saveBitacoraStorage()) {
+    bitacoraData.custom.pop();
+    delete bitacoraData.visited[id];
+    return;
+  }
+
+  document.getElementById("bitacoraAddSearch").value = "";
+  document.getElementById("bitacoraCustomCity").value = "";
+  document.getElementById("bitacoraCustomDate").value = "";
+
+  document.getElementById("bitacoraCustom").hidden = true;
+
+  renderBitacora();
+
+  bitacoraStatus.textContent =
+    `Se agregó "${name}" y quedó registrado como visitado.`;
+}
+
+
 function renderBitacora() {
 
   const search = document
     .getElementById("bitacoraSearch")
     .value.trim().toLocaleLowerCase("es");
-
-  const cityFilter = document
-    .getElementById("bitacoraCityFilter")
-    .value;
 
   const statusFilter = document
     .getElementById("bitacoraStatusFilter")
@@ -1499,6 +1776,44 @@ function renderBitacora() {
 
   const allLocations = getAllBitacoraLocations();
 
+  // Actualizar el selector de ciudades.
+  const cities = [...new Set(
+    allLocations.map(location => location.city).filter(Boolean)
+  )].sort((a, b) => a.localeCompare(b, "es"));
+
+  const citySelect = document.getElementById("bitacoraCityFilter");
+  const previousCity = citySelect.value;
+
+  const currentOptions = [...citySelect.options]
+    .map(option => option.value)
+    .filter(value => value !== "");
+
+  const optionsChanged =
+    cities.length !== currentOptions.length ||
+    cities.some(city => !currentOptions.includes(city));
+
+  if (optionsChanged) {
+    citySelect.innerHTML =
+      '<option value="">Todas las ciudades</option>';
+
+    cities.forEach(city => {
+      const option = document.createElement("option");
+      option.value = city;
+      option.textContent = city;
+      citySelect.appendChild(option);
+    });
+  }
+
+  if (cities.includes(previousCity)) {
+    citySelect.value = previousCity;
+  } else {
+    citySelect.value = "";
+  }
+
+  // Leer el filtro después de actualizar el selector.
+  const cityFilter = citySelect.value;
+
+  // Calcular el progreso general.
   const visitedCount = allLocations.filter(location =>
     Boolean(bitacoraData.visited[getBitacoraLocationId(location)])
   ).length;
@@ -1524,36 +1839,14 @@ function renderBitacora() {
   document.getElementById("bitacoraProgressFill").style.width =
     `${percent}%`;
 
-  const cities = [...new Set(
-    allLocations.map(location => location.city).filter(Boolean)
-  )].sort((a, b) => a.localeCompare(b, "es"));
-
-  const citySelect = document.getElementById("bitacoraCityFilter");
-  const previousCity = citySelect.value;
-
-  if (citySelect.options.length !== cities.length + 1) {
-    citySelect.innerHTML =
-      '<option value="">Todas las ciudades</option>';
-
-    cities.forEach(city => {
-      const option = document.createElement("option");
-      option.value = city;
-      option.textContent = city;
-      citySelect.appendChild(option);
-    });
-  }
-
-  if (cities.includes(previousCity)) {
-    citySelect.value = previousCity;
-  }
-
+  // Aplicar búsqueda y filtros.
   const filtered = allLocations.filter(location => {
 
     const id = getBitacoraLocationId(location);
     const visited = Boolean(bitacoraData.visited[id]);
 
     const matchesSearch =
-      `${location.name} ${location.city} ${location.country || ""}`
+      `${location.name} ${location.city || ""} ${location.country || ""}`
         .toLocaleLowerCase("es")
         .includes(search);
 
@@ -1577,10 +1870,11 @@ function renderBitacora() {
     return;
   }
 
-  // Agrupar por país y ciudad, sin depender del día del itinerario.
+  // Agrupar por país y ciudad.
   const groups = new Map();
 
   filtered.forEach(location => {
+
     const country = location.country || "Sin país asignado";
     const city = location.city || "Sin ciudad asignada";
     const groupName = `${country} · ${city}`;
@@ -1592,6 +1886,7 @@ function renderBitacora() {
     groups.get(groupName).push(location);
   });
 
+  // Construir la lista de lugares.
   bitacoraList.innerHTML = [...groups.entries()]
     .map(([groupName, locations]) => {
 
@@ -1663,9 +1958,11 @@ function renderBitacora() {
 
 function updateBitacoraVisit(id, checked) {
 
+function updateBitacoraVisit(id, checked) {
+
   if (checked) {
     bitacoraData.visited[id] = {
-      date: getLocalDate()
+      date: ""
     };
   } else {
     delete bitacoraData.visited[id];
