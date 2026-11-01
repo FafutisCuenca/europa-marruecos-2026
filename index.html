@@ -815,6 +815,208 @@
   }
 }
 
+/* =====================================================
+   BITÁCORA DE VIAJE — BUSCADOR EXTERNO PHOTON
+   ===================================================== */
+
+/* Contenedor para agregar lugares */
+
+.bitacora-add {
+  margin: 24px 0;
+  padding: 20px;
+  background: var(--paper);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.bitacora-add h3 {
+  margin-top: 0;
+  color: var(--green);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.4rem;
+  font-weight: normal;
+}
+
+/* Campo único de búsqueda */
+
+.bitacora-search-add {
+  width: 100%;
+  position: relative;
+}
+
+.bitacora-search-add input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 13px 14px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: white;
+  color: var(--text);
+  font: inherit;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+.bitacora-search-add input:focus {
+  outline: 2px solid var(--green-light);
+  outline-offset: 2px;
+  border-color: var(--green);
+}
+
+/* Resultados de Photon */
+
+.bitacora-add-results {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.bitacora-add-results:empty {
+  display: none;
+}
+
+.bitacora-result {
+  display: block;
+  width: 100%;
+  padding: 13px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: white;
+  color: var(--text);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: background .2s ease, border-color .2s ease;
+}
+
+.bitacora-result:hover {
+  background: #edf2eb;
+  border-color: var(--green-light);
+}
+
+.bitacora-result:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+.bitacora-result strong,
+.bitacora-result span {
+  display: block;
+}
+
+.bitacora-result strong {
+  color: var(--green);
+  font-size: .98rem;
+}
+
+.bitacora-result span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: .85rem;
+  overflow-wrap: anywhere;
+}
+
+/* Mensajes del buscador */
+
+.bitacora-search-message {
+  padding: 12px;
+  color: var(--muted);
+  font-size: .9rem;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+}
+
+/* Lugar seleccionado */
+
+.bitacora-selected {
+  margin-top: 15px;
+  padding: 17px;
+  background: #edf2eb;
+  border: 1px solid #bdcdbd;
+  border-radius: 8px;
+}
+
+.bitacora-selected strong {
+  display: block;
+  color: var(--green);
+  font-size: 1.05rem;
+}
+
+.bitacora-selected p {
+  margin: 7px 0;
+  color: var(--muted);
+  font-size: .9rem;
+  overflow-wrap: anywhere;
+}
+
+/* Botón para agregar el lugar */
+
+#bitacoraConfirmAdd {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--green);
+  border-radius: 7px;
+  background: var(--green);
+  color: white;
+  font: inherit;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+#bitacoraConfirmAdd:hover {
+  filter: brightness(.92);
+}
+
+#bitacoraConfirmAdd:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 3px;
+}
+
+/* Progreso de la bitácora */
+
+.bitacora-progress {
+  margin: 20px 0;
+}
+
+.bitacora-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: .85rem;
+}
+
+/* Adaptación para teléfonos */
+
+@media (max-width: 520px) {
+
+  .bitacora-add {
+    padding: 15px;
+  }
+
+  .bitacora-add h3 {
+    font-size: 1.25rem;
+  }
+
+  .bitacora-result {
+    padding: 12px;
+  }
+
+  .bitacora-stats {
+    gap: 8px 14px;
+  }
+
+  #bitacoraConfirmAdd {
+    padding: 13px 10px;
+  }
+
+}
+
     
   </style>
 </head>
@@ -1479,23 +1681,59 @@ const numeric = String(value).match(
 
   loadItinerary();
 
-    /* ==========================================
+/* =====================================================
    BITÁCORA DE VIAJE
-   ========================================== */
+   Europa + Marruecos 2026
+   Buscador externo Photon
+   ===================================================== */
+
+"use strict";
 
 const BITACORA_STORAGE_KEY = "europa-marruecos-2026-bitacora";
 
+const BITACORA_PHOTON_URL = "https://photon.komoot.io/api/";
+
+const BITACORA_SEARCH_DELAY = 500;
+const BITACORA_MIN_SEARCH_LENGTH = 3;
+const BITACORA_MAX_RESULTS = 6;
+const BITACORA_MINIMUM_INTERVAL = 1000;
+const BITACORA_REQUEST_TIMEOUT = 15000;
+
 let bitacoraLocations = [];
+
 let bitacoraData = {
   visited: {},
   custom: []
 };
 
+let bitacoraSelectedLocation = null;
+let bitacoraSearchResults = [];
+
+let bitacoraSearchTimer = null;
+let bitacoraSearchSequence = 0;
+let bitacoraSearchController = null;
+let bitacoraLastRequestAt = 0;
+
 const bitacoraList = document.getElementById("bitacoraList");
 const bitacoraStatus = document.getElementById("bitacoraStatus");
 
+const bitacoraPhotonSearch =
+  document.getElementById("bitacoraPhotonSearch");
+
+const bitacoraPhotonResults =
+  document.getElementById("bitacoraPhotonResults");
+
+const bitacoraSelected =
+  document.getElementById("bitacoraSelected");
+
+
+/* =====================================================
+   UTILIDADES
+   ===================================================== */
+
 function getLocalDate() {
   const now = new Date();
+
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
@@ -1503,58 +1741,28 @@ function getLocalDate() {
   return `${year}-${month}-${day}`;
 }
 
-function loadBitacoraStorage() {
-  try {
-    const saved = localStorage.getItem(BITACORA_STORAGE_KEY);
 
-    if (saved) {
-      const parsed = JSON.parse(saved);
-
-      bitacoraData = {
-        visited: parsed.visited || {},
-        custom: Array.isArray(parsed.custom) ? parsed.custom : []
-      };
-    }
-  } catch (error) {
-    console.error("Error leyendo bitácora:", error);
-
-    bitacoraData = {
-      visited: {},
-      custom: []
-    };
-  }
+function escapeBitacoraHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
-function saveBitacoraStorage() {
-  try {
-    localStorage.setItem(
-      BITACORA_STORAGE_KEY,
-      JSON.stringify(bitacoraData)
-    );
 
-    bitacoraStatus.textContent =
-      "Bitácora guardada correctamente en este dispositivo.";
-
-    return true;
-
-  } catch (error) {
-    console.error("Error guardando bitácora:", error);
-
-    bitacoraStatus.textContent =
-      "No fue posible guardar los cambios en el navegador.";
-
-    return false;
-  }
+function normalizeBitacoraSearch(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("es")
+    .trim();
 }
 
-function getAllBitacoraLocations() {
-  return [
-    ...bitacoraLocations,
-    ...bitacoraData.custom
-  ];
-}
 
 function getBitacoraCategory(location) {
+
   const categories = {
     airport: "Aeropuerto",
     attraction: "Atracción",
@@ -1572,429 +1780,94 @@ function getBitacoraCategory(location) {
     beach: "Playa",
     region: "Región",
     route: "Ruta",
-    city: "Ciudad"
+    city: "Ciudad",
+    custom: "Lugar agregado"
   };
 
-  return categories[location.type] ||
-    (location.type === "custom" ? "Lugar espontáneo" : "Lugar");
-}
-
-function getBitacoraLocationId(location) {
-  return location.id;
-}
-
-let bitacoraSelectedLocation = null;
-
-function normalizeBitacoraSearch(value) {
-  return String(value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLocaleLowerCase("es")
-    .trim();
+  return categories[location.type] || "Lugar";
 }
 
 
-function renderBitacoraAddResults() {
-
-  const input = document.getElementById("bitacoraAddSearch");
-  const results = document.getElementById("bitacoraAddResults");
-  const selected = document.getElementById("bitacoraSelected");
-  const custom = document.getElementById("bitacoraCustom");
-
-  const query = normalizeBitacoraSearch(input.value);
-
-  bitacoraSelectedLocation = null;
-  selected.hidden = true;
-  custom.hidden = true;
-  results.innerHTML = "";
-
-  if (!query) return;
-
-  // Buscar en TODO el catálogo maestro, no en el itinerario.
-  const matches = getAllBitacoraLocations()
-    .filter(location => {
-
-      const searchableText = [
-        location.name,
-        location.city,
-        location.country,
-        location.address,
-        location.type,
-        location.locationStatus
-      ].join(" ");
-
-      return normalizeBitacoraSearch(searchableText)
-        .includes(query);
-    })
-    .slice(0, 15);
-
-  if (matches.length) {
-
-    results.innerHTML = matches.map(location => `
-      <button
-        type="button"
-        class="bitacora-result"
-        data-location-id="${escapeHtml(location.id)}"
-      >
-        <strong>${escapeHtml(location.name)}</strong>
-        <span>
-          ${escapeHtml(location.city || "Sin ciudad")}
-          · ${escapeHtml(location.country || "Sin país")}
-        </span>
-        <span>
-          ${escapeHtml(location.address || getBitacoraCategory(location))}
-        </span>
-      </button>
-    `).join("");
-
-    return;
-  }
-
-  results.innerHTML = `
-    <div class="empty-state">
-      No encontramos coincidencias en el catálogo general.
-      Puedes agregar este lugar como nuevo.
-    </div>
-  `;
-
-  custom.hidden = false;
-}
-
-function selectBitacoraLocation(id) {
-  const location = getAllBitacoraLocations()
-    .find(item => item.id === id);
-
-  if (!location) return;
-
-  bitacoraSelectedLocation = location;
-
-  document.getElementById("bitacoraSelectedName").textContent =
-    location.name;
-
-  document.getElementById("bitacoraSelectedMeta").textContent =
-    `${location.city || "Sin ciudad"} · ${location.country || "Sin país"}`;
-
-  document.getElementById("bitacoraAddDate").value =
-    bitacoraData.visited[id]?.date || "";
-
-  document.getElementById("bitacoraSelected").hidden = false;
-  document.getElementById("bitacoraCustom").hidden = true;
-  document.getElementById("bitacoraAddResults").innerHTML = "";
-}
-
-function confirmBitacoraVisit() {
-  if (!bitacoraSelectedLocation) return;
-
-  const id = bitacoraSelectedLocation.id;
-  const date = document.getElementById("bitacoraAddDate").value;
-
-  bitacoraData.visited[id] = { date };
-
-  if (!saveBitacoraStorage()) return;
-
-  document.getElementById("bitacoraAddSearch").value = "";
-  document.getElementById("bitacoraAddDate").value = "";
-  document.getElementById("bitacoraSelected").hidden = true;
-
-  bitacoraSelectedLocation = null;
-
-  renderBitacora();
-
-  bitacoraStatus.textContent =
-    "Lugar agregado correctamente a tus visitas.";
-}
-
-function createCustomBitacoraLocation() {
-  const name = document.getElementById("bitacoraAddSearch")
-    .value.trim();
-
-  const city = document.getElementById("bitacoraCustomCity")
-    .value.trim();
-
-  const country = document.getElementById("bitacoraCustomCountry")
-    .value;
-
-  const date = document.getElementById("bitacoraCustomDate")
-    .value;
-
-  if (!name || !city) {
-    bitacoraStatus.textContent =
-      "Escribe el nombre del lugar y su ciudad.";
-    return;
-  }
-
-  const duplicate = getAllBitacoraLocations().find(location =>
-    normalizeBitacoraSearch(location.name) ===
-      normalizeBitacoraSearch(name) &&
-    normalizeBitacoraSearch(location.city) ===
-      normalizeBitacoraSearch(city)
-  );
-
-  if (duplicate) {
-    selectBitacoraLocation(duplicate.id);
-    return;
-  }
-
-  const id = "espontaneo-" + Date.now();
-
-  const newLocation = {
-    id,
-    name,
-    city,
-    country,
-    type: "custom",
-    locationStatus: "user_added"
-  };
-
-  bitacoraData.custom.push(newLocation);
-
-  bitacoraData.visited[id] = { date };
-
-  if (!saveBitacoraStorage()) {
-    bitacoraData.custom.pop();
-    delete bitacoraData.visited[id];
-    return;
-  }
-
-  document.getElementById("bitacoraAddSearch").value = "";
-  document.getElementById("bitacoraCustomCity").value = "";
-  document.getElementById("bitacoraCustomDate").value = "";
-
-  document.getElementById("bitacoraCustom").hidden = true;
-
-  renderBitacora();
-
-  bitacoraStatus.textContent =
-    `Se agregó "${name}" y quedó registrado como visitado.`;
+function getAllBitacoraLocations() {
+  return [
+    ...bitacoraLocations,
+    ...bitacoraData.custom
+  ];
 }
 
 
-function renderBitacora() {
+/* =====================================================
+   ALMACENAMIENTO LOCAL
+   Conserva la clave y los registros existentes.
+   ===================================================== */
 
-  const search = document
-    .getElementById("bitacoraSearch")
-    .value.trim().toLocaleLowerCase("es");
-
-  const statusFilter = document
-    .getElementById("bitacoraStatusFilter")
-    .value;
-
-  const allLocations = getAllBitacoraLocations();
-
-  // Actualizar el selector de ciudades.
-  const cities = [...new Set(
-    allLocations.map(location => location.city).filter(Boolean)
-  )].sort((a, b) => a.localeCompare(b, "es"));
-
-  const citySelect = document.getElementById("bitacoraCityFilter");
-  const previousCity = citySelect.value;
-
-  const currentOptions = [...citySelect.options]
-    .map(option => option.value)
-    .filter(value => value !== "");
-
-  const optionsChanged =
-    cities.length !== currentOptions.length ||
-    cities.some(city => !currentOptions.includes(city));
-
-  if (optionsChanged) {
-    citySelect.innerHTML =
-      '<option value="">Todas las ciudades</option>';
-
-    cities.forEach(city => {
-      const option = document.createElement("option");
-      option.value = city;
-      option.textContent = city;
-      citySelect.appendChild(option);
-    });
-  }
-
-  if (cities.includes(previousCity)) {
-    citySelect.value = previousCity;
-  } else {
-    citySelect.value = "";
-  }
-
-  // Leer el filtro después de actualizar el selector.
-  const cityFilter = citySelect.value;
-
-  // Calcular el progreso general.
-  const visitedCount = allLocations.filter(location =>
-    Boolean(bitacoraData.visited[getBitacoraLocationId(location)])
-  ).length;
-
-  const total = allLocations.length;
-  const pendingCount = total - visitedCount;
-  const percent = total
-    ? Math.round((visitedCount / total) * 100)
-    : 0;
-
-  document.getElementById("bitacoraProgressText").textContent =
-    `${visitedCount} de ${total} lugares registrados como visitados`;
-
-  document.getElementById("bitacoraVisitedCount").textContent =
-    `${visitedCount} visitados`;
-
-  document.getElementById("bitacoraPendingCount").textContent =
-    `${pendingCount} pendientes`;
-
-  document.getElementById("bitacoraPercent").textContent =
-    `${percent} % completado`;
-
-  document.getElementById("bitacoraProgressFill").style.width =
-    `${percent}%`;
-
-  // Aplicar búsqueda y filtros.
-  const filtered = allLocations.filter(location => {
-
-    const id = getBitacoraLocationId(location);
-    const visited = Boolean(bitacoraData.visited[id]);
-
-    const matchesSearch =
-      `${location.name} ${location.city || ""} ${location.country || ""}`
-        .toLocaleLowerCase("es")
-        .includes(search);
-
-    const matchesCity =
-      !cityFilter || location.city === cityFilter;
-
-    const matchesStatus =
-      statusFilter === "all" ||
-      (statusFilter === "visited" && visited) ||
-      (statusFilter === "pending" && !visited);
-
-    return matchesSearch && matchesCity && matchesStatus;
-  });
-
-  if (!filtered.length) {
-    bitacoraList.innerHTML = `
-      <div class="empty-state">
-        No encontramos lugares con esos criterios.
-      </div>
-    `;
-    return;
-  }
-
-  // Agrupar por país y ciudad.
-  const groups = new Map();
-
-  filtered.forEach(location => {
-
-    const country = location.country || "Sin país asignado";
-    const city = location.city || "Sin ciudad asignada";
-    const groupName = `${country} · ${city}`;
-
-    if (!groups.has(groupName)) {
-      groups.set(groupName, []);
-    }
-
-    groups.get(groupName).push(location);
-  });
-
-  // Construir la lista de lugares.
-  bitacoraList.innerHTML = [...groups.entries()]
-    .map(([groupName, locations]) => {
-
-      const items = locations.map(location => {
-
-        const id = getBitacoraLocationId(location);
-        const visit = bitacoraData.visited[id];
-        const isVisited = Boolean(visit);
-
-        const dateValue = isVisited
-          ? visit.date || ""
-          : "";
-
-        const safeId = escapeHtml(id);
-        const safeName = escapeHtml(location.name);
-        const category = escapeHtml(getBitacoraCategory(location));
-
-        return `
-          <article class="bitacora-item ${isVisited ? "visited" : ""}">
-
-            <div>
-              <div class="bitacora-item-name">${safeName}</div>
-
-              <div class="bitacora-item-meta">
-                ${category}
-                ${location.locationStatus
-                  ? " · " + escapeHtml(location.locationStatus)
-                  : ""}
-              </div>
-            </div>
-
-            <div class="bitacora-item-control">
-
-              <label class="bitacora-check">
-                <input
-                  type="checkbox"
-                  class="bitacora-visited"
-                  data-id="${safeId}"
-                  ${isVisited ? "checked" : ""}
-                >
-                Visitado
-              </label>
-
-              <input
-                type="date"
-                class="bitacora-date"
-                data-id="${safeId}"
-                value="${escapeHtml(dateValue)}"
-                ${isVisited ? "" : "disabled"}
-                aria-label="Fecha real de visita de ${safeName}"
-              >
-
-            </div>
-
-          </article>
-        `;
-      }).join("");
-
-      return `
-        <section class="bitacora-group">
-          <h3>${escapeHtml(groupName)}</h3>
-          ${items}
-        </section>
-      `;
-
-    }).join("");
-
-}
-
-
-function updateBitacoraVisit(id, checked) {
-
-  if (checked) {
-    bitacoraData.visited[id] = {
-      date: ""
-    };
-  } else {
-    delete bitacoraData.visited[id];
-  }
-
-  saveBitacoraStorage();
-  renderBitacora();
-}
-
-function updateBitacoraDate(id, date) {
-
-  if (!bitacoraData.visited[id]) {
-    bitacoraData.visited[id] = {
-      date: date || getLocalDate()
-    };
-  } else {
-    bitacoraData.visited[id].date = date;
-  }
-
-  saveBitacoraStorage();
-  renderBitacora();
-}
-
-async function loadBitacora() {
+function loadBitacoraStorage() {
 
   try {
 
-    loadBitacoraStorage();
+    const saved = localStorage.getItem(BITACORA_STORAGE_KEY);
+
+    if (!saved) {
+      return;
+    }
+
+    const parsed = JSON.parse(saved);
+
+    bitacoraData = {
+      visited:
+        parsed.visited &&
+        typeof parsed.visited === "object" &&
+        !Array.isArray(parsed.visited)
+          ? parsed.visited
+          : {},
+
+      custom: Array.isArray(parsed.custom)
+        ? parsed.custom
+        : []
+    };
+
+  } catch (error) {
+
+    console.error("Error leyendo bitácora:", error);
+
+    bitacoraStatus.textContent =
+      "No fue posible leer los registros guardados de la bitácora.";
+  }
+}
+
+
+function saveBitacoraStorage() {
+
+  try {
+
+    localStorage.setItem(
+      BITACORA_STORAGE_KEY,
+      JSON.stringify(bitacoraData)
+    );
+
+    return true;
+
+  } catch (error) {
+
+    console.error("Error guardando bitácora:", error);
+
+    bitacoraStatus.textContent =
+      "No fue posible guardar los cambios en este dispositivo.";
+
+    return false;
+  }
+}
+
+
+/* =====================================================
+   CARGAR CATÁLOGO MAESTRO
+   ===================================================== */
+
+async function loadBitacora() {
+
+  loadBitacoraStorage();
+
+  try {
 
     const response = await fetch("./data/locations.json", {
       cache: "no-cache"
@@ -2011,7 +1884,9 @@ async function loadBitacora() {
     }
 
     bitacoraLocations = data.locations.filter(location =>
-      location && location.id && location.name
+      location &&
+      location.id &&
+      location.name
     );
 
     renderBitacora();
@@ -2021,219 +1896,738 @@ async function loadBitacora() {
 
   } catch (error) {
 
-    console.error("No se pudo cargar la bitácora:", error);
+    console.error("No se pudo cargar el catálogo:", error);
+
+    bitacoraLocations = [];
+
+    renderBitacora();
 
     bitacoraStatus.textContent =
-      "No se pudo cargar data/locations.json. Verifica la ruta y el formato del archivo.";
-
-    bitacoraList.innerHTML = `
-      <div class="empty-state">
-        No fue posible cargar el catálogo general de lugares.
-        La agenda diaria continúa funcionando independientemente.
-      </div>
-    `;
+      "No se pudo cargar el catálogo general. Los lugares nuevos todavía pueden buscarse y agregarse.";
   }
 }
 
-// Marcar o desmarcar lugares visitados.
-bitacoraList.addEventListener("change", function(event) {
 
-  if (event.target.classList.contains("bitacora-visited")) {
-    updateBitacoraVisit(
-      event.target.dataset.id,
-      event.target.checked
-    );
+/* =====================================================
+   BUSCADOR EXTERNO PHOTON
+   ===================================================== */
+
+function mapBitacoraPhotonFeature(feature, index) {
+
+  const properties = feature.properties || {};
+
+  const coordinates = feature.geometry?.coordinates || [];
+
+  const longitude = Number(coordinates[0]);
+  const latitude = Number(coordinates[1]);
+
+  if (
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude)
+  ) {
+    return null;
   }
 
-  if (event.target.classList.contains("bitacora-date")) {
-    updateBitacoraDate(
-      event.target.dataset.id,
-      event.target.value
-    );
-  }
+  const name =
+    properties.name ||
+    properties.street ||
+    properties.locality ||
+    properties.city ||
+    properties.district ||
+    "Lugar sin nombre";
 
-});
+  const city =
+    properties.city ||
+    properties.district ||
+    properties.locality ||
+    properties.county ||
+    "";
 
-// Búsqueda y filtros de la lista general.
-document.getElementById("bitacoraSearch")
-  .addEventListener("input", renderBitacora);
+  const country = properties.country || "";
 
-document.getElementById("bitacoraCityFilter")
-  .addEventListener("change", renderBitacora);
+  const address = [
+    properties.street,
+    properties.housenumber
+  ].filter(Boolean).join(" ");
 
-document.getElementById("bitacoraStatusFilter")
-  .addEventListener("change", renderBitacora);
+  const osmType = properties.osm_type || "";
+  const osmId = properties.osm_id || "";
 
-// BUSCADOR GLOBAL PARA INCORPORAR LUGARES.
-document.getElementById("bitacoraAddSearch")
-  .addEventListener("input", renderBitacoraAddResults);
+  const id = osmId
+    ? `photon-${osmType}-${osmId}`
+    : `photon-${Date.now()}-${index}`;
 
-// Seleccionar una coincidencia del catálogo.
-document.getElementById("bitacoraAddResults")
-  .addEventListener("click", function(event) {
-
-    const button = event.target.closest(".bitacora-result");
-
-    if (!button) return;
-
-    selectBitacoraLocation(button.dataset.locationId);
-
-  });
-
-// Confirmar el registro de visita.
-document.getElementById("bitacoraConfirmAdd")
-  .addEventListener("click", confirmBitacoraVisit);
-
-// Incorporar un lugar que no existe en el catálogo.
-document.getElementById("bitacoraCreateCustom")
-  .addEventListener("click", createCustomBitacoraLocation);
-
-// Cargar el catálogo independientemente del itinerario.
-loadBitacora();
-
-
-function updateBitacoraDate(id, date) {
-
-  if (!bitacoraData.visited[id]) {
-    bitacoraData.visited[id] = {
-      date: date || getLocalDate()
-    };
-  } else {
-    bitacoraData.visited[id].date = date;
-  }
-
-  saveBitacoraStorage();
-  renderBitacora();
+  return {
+    id,
+    name,
+    city,
+    country,
+    address,
+    latitude,
+    longitude,
+    type: "custom",
+    locationStatus: "user_added",
+    source: "photon",
+    osm_type: osmType,
+    osm_id: osmId,
+    osm_value: properties.osm_value || "",
+    label: [
+      name,
+      city,
+      country
+    ].filter(Boolean).join(", ")
+  };
 }
 
-async function loadBitacora() {
+
+async function searchBitacoraPhoton(query, sequence) {
+
+  const url = new URL(BITACORA_PHOTON_URL);
+
+  url.searchParams.set("q", query);
+  url.searchParams.set("limit", String(BITACORA_MAX_RESULTS));
+  url.searchParams.set("lang", "en");
+
+  const controller = new AbortController();
+
+  bitacoraSearchController = controller;
+
+  const timeout = setTimeout(() => {
+    controller.abort();
+  }, BITACORA_REQUEST_TIMEOUT);
 
   try {
 
-    loadBitacoraStorage();
-
-    const response = await fetch("./data/locations.json", {
-      cache: "no-cache"
+    const response = await fetch(url.toString(), {
+      method: "GET",
+      headers: {
+        "Accept": "application/json"
+      },
+      signal: controller.signal
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+      throw new Error(`Photon respondió HTTP ${response.status}`);
     }
 
     const data = await response.json();
 
-    if (!Array.isArray(data.locations)) {
-      throw new Error("El catálogo no contiene una lista de lugares.");
+    if (sequence !== bitacoraSearchSequence) {
+      return;
     }
 
-    bitacoraLocations = data.locations;
+    const features = Array.isArray(data.features)
+      ? data.features
+      : [];
 
-    renderBitacora();
+    bitacoraSearchResults = features
+      .map((feature, index) =>
+        mapBitacoraPhotonFeature(feature, index)
+      )
+      .filter(Boolean);
 
-    bitacoraStatus.textContent =
-      `Catálogo cargado: ${bitacoraLocations.length} lugares disponibles.`;
+    renderBitacoraPhotonResults();
 
   } catch (error) {
 
-    console.error("No se pudo cargar la bitácora:", error);
+    if (sequence !== bitacoraSearchSequence) {
+      return;
+    }
 
-    bitacoraStatus.textContent =
-      "No se pudo cargar data/locations.json. Verifica la ruta y el formato del archivo.";
+    if (error.name === "AbortError") {
 
-    bitacoraList.innerHTML = `
-      <div class="empty-state">
-        No fue posible cargar el catálogo de lugares.
-        La agenda diaria continúa funcionando independientemente.
-      </div>
-    `;
+      bitacoraPhotonResults.innerHTML = `
+        <div class="bitacora-search-message">
+          La búsqueda tardó demasiado. Intenta nuevamente.
+        </div>
+      `;
+
+    } else {
+
+      console.error("Error buscando en Photon:", error);
+
+      bitacoraPhotonResults.innerHTML = `
+        <div class="bitacora-search-message">
+          No fue posible consultar el buscador externo.
+          Verifica tu conexión a internet e intenta nuevamente.
+        </div>
+      `;
+    }
+
+  } finally {
+
+    clearTimeout(timeout);
+
+    if (bitacoraSearchController === controller) {
+      bitacoraSearchController = null;
+    }
   }
 }
 
-// Marcar o desmarcar lugares.
+
+/* =====================================================
+   CONTROL DE BÚSQUEDA Y FRECUENCIA DE CONSULTAS
+   ===================================================== */
+
+function scheduleBitacoraPhotonSearch() {
+
+  clearTimeout(bitacoraSearchTimer);
+
+  bitacoraSearchSequence++;
+
+  const sequence = bitacoraSearchSequence;
+
+  if (bitacoraSearchController) {
+    bitacoraSearchController.abort();
+  }
+
+  bitacoraSelectedLocation = null;
+  bitacoraSearchResults = [];
+
+  bitacoraSelected.hidden = true;
+  bitacoraPhotonResults.innerHTML = "";
+
+  const query = bitacoraPhotonSearch.value.trim();
+
+  if (query.length < BITACORA_MIN_SEARCH_LENGTH) {
+
+    if (query.length > 0) {
+      bitacoraPhotonResults.innerHTML = `
+        <div class="bitacora-search-message">
+          Escribe al menos 3 caracteres para buscar.
+        </div>
+      `;
+    }
+
+    return;
+  }
+
+  bitacoraPhotonResults.innerHTML = `
+    <div class="bitacora-search-message">
+      Buscando lugares...
+    </div>
+  `;
+
+  bitacoraSearchTimer = setTimeout(() => {
+
+    const elapsed = Date.now() - bitacoraLastRequestAt;
+
+    const remaining = Math.max(
+      0,
+      BITACORA_MINIMUM_INTERVAL - elapsed
+    );
+
+    setTimeout(() => {
+
+      if (sequence !== bitacoraSearchSequence) {
+        return;
+      }
+
+      bitacoraLastRequestAt = Date.now();
+
+      searchBitacoraPhoton(query, sequence);
+
+    }, remaining);
+
+  }, BITACORA_SEARCH_DELAY);
+}
+
+
+/* =====================================================
+   MOSTRAR RESULTADOS EXTERNOS
+   ===================================================== */
+
+function renderBitacoraPhotonResults() {
+
+  if (!bitacoraSearchResults.length) {
+
+    bitacoraPhotonResults.innerHTML = `
+      <div class="bitacora-search-message">
+        No encontramos lugares con esa búsqueda.
+        Prueba con otro nombre o una ubicación diferente.
+      </div>
+    `;
+
+    return;
+  }
+
+  bitacoraPhotonResults.innerHTML =
+    bitacoraSearchResults.map((location, index) => `
+
+      <button
+        type="button"
+        class="bitacora-result"
+        data-result-index="${index}"
+      >
+
+        <strong>
+          ${escapeBitacoraHtml(location.name)}
+        </strong>
+
+        <span>
+          ${escapeBitacoraHtml(location.city || "Sin ciudad")}
+          ·
+          ${escapeBitacoraHtml(location.country || "Sin país")}
+        </span>
+
+        ${
+          location.address
+            ? `<span>${escapeBitacoraHtml(location.address)}</span>`
+            : ""
+        }
+
+      </button>
+
+    `).join("");
+}
+
+
+/* =====================================================
+   SELECCIONAR RESULTADO EXTERNO
+   ===================================================== */
+
+function selectBitacoraPhotonResult(index) {
+
+  const location = bitacoraSearchResults[index];
+
+  if (!location) {
+    return;
+  }
+
+  bitacoraSelectedLocation = location;
+
+  document.getElementById("bitacoraSelectedName").textContent =
+    location.name;
+
+  document.getElementById("bitacoraSelectedMeta").textContent =
+    [
+      location.city || "Sin ciudad",
+      location.country || "Sin país",
+      location.address || ""
+    ].filter(Boolean).join(" · ");
+
+  bitacoraSelected.hidden = false;
+
+  bitacoraPhotonResults.innerHTML = "";
+}
+
+
+/* =====================================================
+   EVITAR LUGARES DUPLICADOS
+   ===================================================== */
+
+function findBitacoraDuplicate(location) {
+
+  const allLocations = getAllBitacoraLocations();
+
+  return allLocations.find(existing => {
+
+    // Comparar identificadores de OpenStreetMap.
+    if (
+      location.osm_id &&
+      existing.osm_id &&
+      String(location.osm_id) === String(existing.osm_id) &&
+      String(location.osm_type) === String(existing.osm_type)
+    ) {
+      return true;
+    }
+
+    // Comparar nombre, ciudad y país.
+    const sameName =
+      normalizeBitacoraSearch(existing.name) ===
+      normalizeBitacoraSearch(location.name);
+
+    const sameCity =
+      normalizeBitacoraSearch(existing.city) ===
+      normalizeBitacoraSearch(location.city);
+
+    const sameCountry =
+      normalizeBitacoraSearch(existing.country) ===
+      normalizeBitacoraSearch(location.country);
+
+    if (sameName && sameCity && sameCountry) {
+      return true;
+    }
+
+    // Comparar coordenadas cuando existan en ambos lugares.
+    const hasCoordinates =
+      Number.isFinite(Number(existing.latitude)) &&
+      Number.isFinite(Number(existing.longitude)) &&
+      Number.isFinite(Number(location.latitude)) &&
+      Number.isFinite(Number(location.longitude));
+
+    if (hasCoordinates && sameName) {
+
+      const latitudeDifference =
+        Math.abs(Number(existing.latitude) - location.latitude);
+
+      const longitudeDifference =
+        Math.abs(Number(existing.longitude) - location.longitude);
+
+      if (
+        latitudeDifference < 0.0005 &&
+        longitudeDifference < 0.0005
+      ) {
+        return true;
+      }
+    }
+
+    return false;
+  });
+}
+
+
+/* =====================================================
+   AGREGAR LUGAR COMO PENDIENTE
+   ===================================================== */
+
+function confirmBitacoraAdd() {
+
+  if (!bitacoraSelectedLocation) {
+    return;
+  }
+
+  const location = bitacoraSelectedLocation;
+
+  const duplicate = findBitacoraDuplicate(location);
+
+  if (duplicate) {
+
+    bitacoraStatus.textContent =
+      `"${duplicate.name}" ya existe en tu bitácora. No se agregó nuevamente.`;
+
+    bitacoraSelected.hidden = true;
+    bitacoraPhotonSearch.value = "";
+    bitacoraSelectedLocation = null;
+
+    return;
+  }
+
+  // El lugar se incorpora como pendiente.
+  // No se crea una entrada en visited.
+
+  bitacoraData.custom.push(location);
+
+  if (!saveBitacoraStorage()) {
+
+    bitacoraData.custom.pop();
+
+    return;
+  }
+
+  bitacoraSelectedLocation = null;
+
+  bitacoraPhotonSearch.value = "";
+  bitacoraPhotonResults.innerHTML = "";
+  bitacoraSelected.hidden = true;
+
+  renderBitacora();
+
+  bitacoraStatus.textContent =
+    `"${location.name}" se agregó correctamente como pendiente.`;
+}
+
+
+/* =====================================================
+   LISTADO Y PROGRESO DE LA BITÁCORA
+   ===================================================== */
+
+function renderBitacora() {
+
+  const allLocations = getAllBitacoraLocations();
+
+  // Calcular lugares visitados y pendientes.
+  const visitedCount = allLocations.filter(location =>
+    Boolean(bitacoraData.visited[location.id])
+  ).length;
+
+  const total = allLocations.length;
+
+  const pendingCount = total - visitedCount;
+
+  const percent = total
+    ? Math.round((visitedCount / total) * 100)
+    : 0;
+
+  document.getElementById("bitacoraProgressText").textContent =
+    `${visitedCount} de ${total} lugares visitados`;
+
+  document.getElementById("bitacoraVisitedCount").textContent =
+    `${visitedCount} visitados`;
+
+  document.getElementById("bitacoraPendingCount").textContent =
+    `${pendingCount} pendientes`;
+
+  document.getElementById("bitacoraPercent").textContent =
+    `${percent} % completado`;
+
+  document.getElementById("bitacoraProgressFill").style.width =
+    `${percent}%`;
+
+
+  if (!allLocations.length) {
+
+    bitacoraList.innerHTML = `
+      <div class="empty-state">
+        Todavía no hay lugares disponibles en la bitácora.
+        Puedes buscar y agregar nuevos lugares.
+      </div>
+    `;
+
+    return;
+  }
+
+
+  // Agrupar por país y ciudad.
+  const groups = new Map();
+
+  allLocations.forEach(location => {
+
+    const country = location.country || "Sin país asignado";
+    const city = location.city || "Sin ciudad asignada";
+
+    const groupName = `${country} · ${city}`;
+
+    if (!groups.has(groupName)) {
+      groups.set(groupName, []);
+    }
+
+    groups.get(groupName).push(location);
+
+  });
+
+
+  // Ordenar grupos alfabéticamente.
+  const sortedGroups = [...groups.entries()].sort((a, b) =>
+    a[0].localeCompare(b[0], "es")
+  );
+
+
+  bitacoraList.innerHTML = sortedGroups.map(([groupName, locations]) => {
+
+    const sortedLocations = [...locations].sort((a, b) =>
+      String(a.name).localeCompare(String(b.name), "es")
+    );
+
+    const items = sortedLocations.map(location => {
+
+      const id = location.id;
+
+      const visit = bitacoraData.visited[id];
+
+      const isVisited = Boolean(visit);
+
+      const dateValue = isVisited
+        ? visit.date || ""
+        : "";
+
+      const safeId = escapeBitacoraHtml(id);
+
+      const safeName = escapeBitacoraHtml(location.name);
+
+      const category = escapeBitacoraHtml(
+        getBitacoraCategory(location)
+      );
+
+      const sourceLabel =
+        location.source === "photon"
+          ? " · Agregado desde búsqueda externa"
+          : location.locationStatus === "user_added"
+            ? " · Agregado manualmente"
+            : "";
+
+      return `
+
+        <article class="bitacora-item ${isVisited ? "visited" : ""}">
+
+          <div>
+
+            <div class="bitacora-item-name">
+              ${safeName}
+            </div>
+
+            <div class="bitacora-item-meta">
+              ${category}${escapeBitacoraHtml(sourceLabel)}
+            </div>
+
+          </div>
+
+          <div class="bitacora-item-control">
+
+            <label class="bitacora-check">
+
+              <input
+                type="checkbox"
+                class="bitacora-visited"
+                data-id="${safeId}"
+                ${isVisited ? "checked" : ""}
+              >
+
+              Visitado
+
+            </label>
+
+            <input
+              type="date"
+              class="bitacora-date"
+              data-id="${safeId}"
+              value="${escapeBitacoraHtml(dateValue)}"
+              ${isVisited ? "" : "disabled"}
+              aria-label="Fecha real de visita de ${safeName}"
+            >
+
+          </div>
+
+        </article>
+
+      `;
+
+    }).join("");
+
+    return `
+
+      <section class="bitacora-group">
+
+        <h3>
+          ${escapeBitacoraHtml(groupName)}
+        </h3>
+
+        ${items}
+
+      </section>
+
+    `;
+
+  }).join("");
+
+}
+
+
+/* =====================================================
+   MARCAR COMO VISITADO O PENDIENTE
+   ===================================================== */
+
+function updateBitacoraVisit(id, checked) {
+
+  if (checked) {
+
+    bitacoraData.visited[id] = {
+      date: ""
+    };
+
+  } else {
+
+    delete bitacoraData.visited[id];
+
+  }
+
+  if (!saveBitacoraStorage()) {
+    return;
+  }
+
+  renderBitacora();
+
+  bitacoraStatus.textContent = checked
+    ? "Lugar marcado como visitado."
+    : "Lugar marcado nuevamente como pendiente.";
+}
+
+
+/* =====================================================
+   REGISTRAR FECHA REAL DE VISITA
+   ===================================================== */
+
+function updateBitacoraDate(id, date) {
+
+  if (!bitacoraData.visited[id]) {
+
+    bitacoraData.visited[id] = {
+      date: date || getLocalDate()
+    };
+
+  } else {
+
+    bitacoraData.visited[id].date = date;
+
+  }
+
+  if (!saveBitacoraStorage()) {
+    return;
+  }
+
+  renderBitacora();
+
+  bitacoraStatus.textContent =
+    "Fecha de visita actualizada correctamente.";
+}
+
+
+/* =====================================================
+   EVENTOS DEL LISTADO
+   ===================================================== */
+
 bitacoraList.addEventListener("change", function(event) {
 
   if (event.target.classList.contains("bitacora-visited")) {
+
     updateBitacoraVisit(
       event.target.dataset.id,
       event.target.checked
     );
+
+    return;
   }
 
   if (event.target.classList.contains("bitacora-date")) {
+
     updateBitacoraDate(
       event.target.dataset.id,
       event.target.value
     );
+
   }
 
 });
 
-// Búsquedas y filtros.
-document.getElementById("bitacoraSearch")
-  .addEventListener("input", renderBitacora);
 
-document.getElementById("bitacoraCityFilter")
-  .addEventListener("change", renderBitacora);
+/* =====================================================
+   EVENTOS DEL BUSCADOR PHOTON
+   ===================================================== */
 
-document.getElementById("bitacoraStatusFilter")
-  .addEventListener("change", renderBitacora);
+bitacoraPhotonSearch.addEventListener(
+  "input",
+  scheduleBitacoraPhotonSearch
+);
 
-// Agregar lugares espontáneos.
-document.getElementById("bitacoraForm")
-  .addEventListener("submit", function(event) {
 
-    event.preventDefault();
+bitacoraPhotonResults.addEventListener("click", function(event) {
 
-    const name = document.getElementById("newPlaceName")
-      .value.trim();
+  const button = event.target.closest(".bitacora-result");
 
-    const city = document.getElementById("newPlaceCity")
-      .value.trim();
+  if (!button) {
+    return;
+  }
 
-    const country = document.getElementById("newPlaceCountry")
-      .value;
+  const index = Number(button.dataset.resultIndex);
 
-    const date = document.getElementById("newPlaceDate")
-      .value;
+  selectBitacoraPhotonResult(index);
 
-    if (!name || !city) {
-      return;
-    }
+});
 
-    const id = "espontaneo-" + Date.now();
 
-    const newLocation = {
-      id,
-      name,
-      city,
-      country,
-      type: "custom",
-      locationStatus: "user_added"
-    };
+/* =====================================================
+   CONFIRMAR INCORPORACIÓN
+   ===================================================== */
 
-    bitacoraData.custom.push(newLocation);
+document.getElementById("bitacoraConfirmAdd")
+  .addEventListener("click", confirmBitacoraAdd);
 
-    if (date) {
-      bitacoraData.visited[id] = {
-        date
-      };
-    }
 
-    saveBitacoraStorage();
+/* =====================================================
+   INICIAR BITÁCORA
+   ===================================================== */
 
-    event.target.reset();
-
-    renderBitacora();
-
-    bitacoraStatus.textContent =
-      `Se agregó "${name}" a tu bitácora.`;
-
-  });
-
-// Cargar el catálogo independientemente del itinerario.
 loadBitacora();
-    
-</script>
 
 <!-- Estadísticas de visitas: GoatCounter -->
 <script
