@@ -929,20 +929,29 @@
         
       </div>
     </section>
+
 <section class="section" id="bitacora">
 
   <h2 class="section-heading">Mi bitácora de viaje</h2>
 
   <p class="section-description">
-    Aquí registraremos los lugares que realmente visitamos.
-    No importa si los visitamos el día previsto o en otro momento.
+    Registra los lugares que visitamos durante nuestro viaje,
+    independientemente de que estuvieran o no en el itinerario original.
+    También puedes agregar descubrimientos espontáneos.
   </p>
 
+  <!-- PROGRESO GENERAL -->
   <div class="bitacora-progress">
-    <strong id="bitacoraProgressText">Preparando bitácora...</strong>
+
+    <strong id="bitacoraProgressText">
+      Preparando bitácora...
+    </strong>
 
     <div class="progress-track">
-      <div class="progress-fill" id="bitacoraProgressFill"></div>
+      <div
+        class="progress-fill"
+        id="bitacoraProgressFill">
+      </div>
     </div>
 
     <div class="bitacora-stats">
@@ -950,101 +959,83 @@
       <span id="bitacoraPendingCount">0 pendientes</span>
       <span id="bitacoraPercent">0 % completado</span>
     </div>
+
   </div>
 
-  <div class="bitacora-tools">
-    <input
-      type="search"
-      id="bitacoraSearch"
-      placeholder="Buscar lugar..."
-      aria-label="Buscar lugar"
-    >
-
-    <select id="bitacoraCityFilter" aria-label="Filtrar por ciudad">
-      <option value="">Todas las ciudades</option>
-    </select>
-
-    <select id="bitacoraStatusFilter" aria-label="Filtrar por estado">
-      <option value="all">Todos los lugares</option>
-      <option value="pending">Pendientes</option>
-      <option value="visited">Visitados</option>
-    </select>
-  </div>
-
-  <p id="bitacoraStatus" class="status" role="status" aria-live="polite">
+  <!-- ESTADO DE LA BITÁCORA -->
+  <p
+    id="bitacoraStatus"
+    class="status"
+    role="status"
+    aria-live="polite">
     Cargando lugares...
   </p>
 
-  <div id="bitacoraList">
-    <div class="empty-state">Preparando catálogo de lugares...</div>
-  </div>
+  <!-- BUSCADOR EXTERNO DE LUGARES -->
+  <div class="bitacora-add">
 
+    <h3>Agregar lugares a mi bitácora</h3>
 
-<div class="bitacora-add">
-  <h3>Agregar un lugar a mi bitácora</h3>
-  <p class="section-description">
-    Busca cualquier lugar del catálogo y selecciónalo para registrarlo como visitado.
-  </p>
-
-  <div class="bitacora-search-add">
-    <input
-      type="search"
-      id="bitacoraAddSearch"
-      placeholder="Escribe el nombre de un lugar..."
-      autocomplete="off"
-      aria-label="Buscar un lugar para agregar a la bitácora"
-    >
-    <div id="bitacoraAddResults" class="bitacora-add-results"></div>
-  </div>
-
-  <div id="bitacoraSelected" class="bitacora-selected" hidden>
-    <strong id="bitacoraSelectedName"></strong>
-    <p id="bitacoraSelectedMeta"></p>
-
-    <label for="bitacoraAddDate">Fecha de visita (opcional)</label>
-    <input type="date" id="bitacoraAddDate">
-
-    <button type="button" class="button" id="bitacoraConfirmAdd">
-      Marcar como visitado
-    </button>
-  </div>
-
-  <div id="bitacoraCustom" class="bitacora-custom" hidden>
-    <p>
-      No encontramos este lugar en nuestro catálogo.
-      Puedes incorporarlo como un lugar nuevo.
+    <p class="section-description">
+      Busca cualquier lugar, ciudad, monumento, museo, restaurante
+      o sitio de interés. Puedes agregar lugares aunque no estén
+      incluidos en nuestro itinerario.
     </p>
 
-    <label for="bitacoraCustomCity">Ciudad o región</label>
-    <input
-      type="text"
-      id="bitacoraCustomCity"
-      placeholder="Ciudad o región"
-      maxlength="80"
-    >
+    <div class="bitacora-search-add">
 
-    <label for="bitacoraCustomCountry">País</label>
-    <select id="bitacoraCustomCountry">
-      <option value="España">España</option>
-      <option value="Marruecos">Marruecos</option>
-      <option value="Otro">Otro</option>
-    </select>
+      <input
+        type="search"
+        id="bitacoraPhotonSearch"
+        placeholder="¿Qué lugar quieres agregar? Escribe al menos 3 caracteres..."
+        autocomplete="off"
+        aria-label="Buscar lugares para agregar a la bitácora">
 
-    <label for="bitacoraCustomDate">Fecha de visita (opcional)</label>
-    <input type="date" id="bitacoraCustomDate">
+      <!-- RESULTADOS DE BÚSQUEDA EXTERNA -->
+      <div
+        id="bitacoraPhotonResults"
+        class="bitacora-add-results"
+        aria-live="polite">
+      </div>
 
-    <button type="button" class="button" id="bitacoraCreateCustom">
-      Agregar y marcar como visitado
-    </button>
+    </div>
+
+    <!-- LUGAR SELECCIONADO -->
+    <div
+      id="bitacoraSelected"
+      class="bitacora-selected"
+      hidden>
+
+      <strong id="bitacoraSelectedName"></strong>
+
+      <p id="bitacoraSelectedMeta"></p>
+
+      <button
+        type="button"
+        class="button"
+        id="bitacoraConfirmAdd">
+        Agregar a mi bitácora como pendiente
+      </button>
+
+    </div>
+
   </div>
-</div>
 
-<p class="bitacora-note">
-  Tus lugares y visitas se guardan localmente en este dispositivo.
-  La fecha de visita es opcional y podrás completarla posteriormente.
-</p>
-</div>
+  <!-- LISTADO GENERAL DE LUGARES -->
+  <div id="bitacoraList">
 
+    <div class="empty-state">
+      Preparando catálogo de lugares...
+    </div>
+
+  </div>
+
+  <!-- AVISO DE ALMACENAMIENTO -->
+  <p class="bitacora-note">
+    Tus lugares y visitas se guardan localmente en este dispositivo.
+    Los lugares nuevos se incorporan como pendientes. Después podrás
+    marcarlos como visitados y registrar la fecha real de visita.
+  </p>
 
 </section>
     
