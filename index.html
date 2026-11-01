@@ -2276,6 +2276,7 @@ function findBitacoraDuplicate(location) {
    AGREGAR LUGAR COMO PENDIENTE
    ===================================================== */
 
+
 function confirmBitacoraAdd() {
 
   if (!bitacoraSelectedLocation) {
@@ -2284,12 +2285,25 @@ function confirmBitacoraAdd() {
 
   const location = bitacoraSelectedLocation;
 
+  // Comprobar si el lugar ya existe en el catálogo.
   const duplicate = findBitacoraDuplicate(location);
 
-  if (duplicate) {
+  // Si ya existe, utilizamos su registro original.
+  const targetLocation = duplicate || location;
+  const targetId = targetLocation.id;
+
+  if (!targetId) {
+    bitacoraStatus.textContent =
+      "No se pudo identificar el lugar seleccionado.";
+
+    return;
+  }
+
+  // Evitar duplicar una visita ya registrada.
+  if (bitacoraData.visited[targetId]) {
 
     bitacoraStatus.textContent =
-      `"${duplicate.name}" ya existe en tu bitácora. No se agregó nuevamente.`;
+      `"${targetLocation.name}" ya está marcado como visitado.`;
 
     bitacoraSelected.hidden = true;
     bitacoraPhotonSearch.value = "";
@@ -2298,52 +2312,66 @@ function confirmBitacoraAdd() {
     return;
   }
 
-  // El lugar se incorpora como pendiente.
-  // No se crea una entrada en visited.
+  // Si es un lugar nuevo, incorporarlo al registro.
+  if (!duplicate) {
+    bitacoraData.custom.push(location);
+  }
 
-  bitacoraData.custom.push(location);
+  // Registrar directamente como visitado.
+  bitacoraData.visited[targetId] = {
+    date: getLocalDate()
+  };
 
+  // Guardar los cambios.
   if (!saveBitacoraStorage()) {
 
-    bitacoraData.custom.pop();
+    if (!duplicate) {
+      bitacoraData.custom.pop();
+    }
+
+    delete bitacoraData.visited[targetId];
 
     return;
   }
 
+  // Limpiar la selección.
   bitacoraSelectedLocation = null;
 
   bitacoraPhotonSearch.value = "";
   bitacoraPhotonResults.innerHTML = "";
   bitacoraSelected.hidden = true;
 
+  // Actualizar la lista.
   renderBitacora();
 
   bitacoraStatus.textContent =
-    `"${location.name}" se agregó correctamente como pendiente.`;
+    `"${targetLocation.name}" se registró como visitado.`;
 }
 
 
 /* =====================================================
    LISTADO Y PROGRESO DE LA BITÁCORA
+   MOSTRAR EXCLUSIVAMENTE LUGARES VISITADOS
    ===================================================== */
 
 function renderBitacora() {
 
   const allLocations = getAllBitacoraLocations();
 
-  // Calcular lugares visitados y pendientes.
-  const visitedCount = allLocations.filter(location =>
+  // Obtener exclusivamente los lugares visitados.
+  const visitedLocations = allLocations.filter(location =>
     Boolean(bitacoraData.visited[location.id])
-  ).length;
+  );
 
+  const visitedCount = visitedLocations.length;
   const total = allLocations.length;
-
   const pendingCount = total - visitedCount;
 
   const percent = total
     ? Math.round((visitedCount / total) * 100)
     : 0;
 
+  // Actualizar indicadores de progreso.
   document.getElementById("bitacoraProgressText").textContent =
     `${visitedCount} de ${total} lugares visitados`;
 
@@ -2360,12 +2388,14 @@ function renderBitacora() {
     `${percent}%`;
 
 
-  if (!allLocations.length) {
+  // Si todavía no hay visitas.
+  if (!visitedLocations.length) {
 
     bitacoraList.innerHTML = `
       <div class="empty-state">
-        Todavía no hay lugares disponibles en la bitácora.
-        Puedes buscar y agregar nuevos lugares.
+        Todavía no has registrado lugares visitados.
+        Utiliza el buscador para encontrar un lugar
+        y marcarlo como visitado.
       </div>
     `;
 
@@ -2373,10 +2403,10 @@ function renderBitacora() {
   }
 
 
-  // Agrupar por país y ciudad.
+  // Agrupar únicamente lugares visitados por país y ciudad.
   const groups = new Map();
 
-  allLocations.forEach(location => {
+  visitedLocations.forEach(location => {
 
     const country = location.country || "Sin país asignado";
     const city = location.city || "Sin ciudad asignada";
@@ -2410,30 +2440,25 @@ function renderBitacora() {
 
       const visit = bitacoraData.visited[id];
 
-      const isVisited = Boolean(visit);
-
-      const dateValue = isVisited
-        ? visit.date || ""
-        : "";
-
       const safeId = escapeBitacoraHtml(id);
-
       const safeName = escapeBitacoraHtml(location.name);
 
       const category = escapeBitacoraHtml(
         getBitacoraCategory(location)
       );
 
+      const dateValue = visit.date || "";
+
       const sourceLabel =
         location.source === "photon"
-          ? " · Agregado desde búsqueda externa"
+          ? " · Búsqueda externa"
           : location.locationStatus === "user_added"
             ? " · Agregado manualmente"
             : "";
 
       return `
 
-        <article class="bitacora-item ${isVisited ? "visited" : ""}">
+        <article class="bitacora-item visited">
 
           <div>
 
@@ -2455,7 +2480,7 @@ function renderBitacora() {
                 type="checkbox"
                 class="bitacora-visited"
                 data-id="${safeId}"
-                ${isVisited ? "checked" : ""}
+                checked
               >
 
               Visitado
@@ -2467,7 +2492,6 @@ function renderBitacora() {
               class="bitacora-date"
               data-id="${safeId}"
               value="${escapeBitacoraHtml(dateValue)}"
-              ${isVisited ? "" : "disabled"}
               aria-label="Fecha real de visita de ${safeName}"
             >
 
@@ -2496,7 +2520,6 @@ function renderBitacora() {
   }).join("");
 
 }
-
 
 /* =====================================================
    MARCAR COMO VISITADO O PENDIENTE
