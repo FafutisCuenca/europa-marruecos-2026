@@ -2483,140 +2483,157 @@
     };
   }
 
-  async function fetchRouteInterests(route, requestSequence) {
-    const geometry = route?.geometry;
-    const coordinates = geometry?.coordinates;
+ async function fetchRouteInterests(route, requestSequence) {
+  const geometry = route?.geometry;
+  const coordinates = geometry?.coordinates;
 
-    if (
-      !Array.isArray(coordinates) ||
-      coordinates.length < 2
-    ) {
+  if (
+    !Array.isArray(coordinates) ||
+    coordinates.length < 2
+  ) {
+    return [];
+  }
+
+  const radius = getInterestRadius(route.mode);
+
+  const samples = sampleRouteCoordinates(
+    coordinates,
+    CONFIG.interestSamplePoints
+  );
+
+  const query = buildOverpassQuery(
+    samples,
+    radius,
+    route.mode
+  );
+
+  const controller = new AbortController();
+  let timedOut = false;
+
+  const timeoutId = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, CONFIG.overpassTimeout);
+
+  try {
+    const response = await fetch(CONFIG.overpassUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+        "Accept": "application/json"
+      },
+      body: new URLSearchParams({ data: query }),
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Overpass respondió con error HTTP ${response.status}.`
+      );
+    }
+
+    const data = await response.json();
+
+    if (requestSequence !== interestRequestSequence) {
       return [];
     }
 
-    const radius = getInterestRadius(route.mode);
+    if (!Array.isArray(data.elements)) {
+      throw new Error(
+        "La respuesta de Overpass no contiene elementos válidos."
+      );
+    }
 
-    const samples = sampleRouteCoordinates(
-      coordinates,
-      CONFIG.interestSamplePoints
-    );
+    const cumulative = getRouteMeasurements(coordinates);
 
-    const query = buildOverpassQuery(
-      samples,
-      radius,
-      route.mode
-    );
+    const origin = route.origin;
+    const destination = route.destination;
+    const totalDistance = cumulative[cumulative.length - 1];
 
-    const controller = new AbortController();
+    const seenIds = new Set();
+    const seenNames = new Set();
+    const candidates = [];
 
-    const timeoutId = setTimeout(
-      () => controller.abort(),
-      CONFIG.overpassTimeout
-    );
+    data.elements.forEach(element => {
+      const item = mapOverpassElement(element);
+      if (!item) return;
 
-    try {
-      const response = await fetch(CONFIG.overpassUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-          "Accept": "application/json"
-        },
-        body: new URLSearchParams({ data: query }),
-        signal: controller.signal
-      });
+      if (seenIds.has(item.id)) return;
+      seenIds.add(item.id);
 
-      if (!response.ok) {
-        throw new Error(
-          `Overpass respondió con error HTTP ${response.status}.`
-        );
+      const measurement = measurePointAlongRoute(
+        item,
+        coordinates,
+        cumulative
+      );
+
+      if (measurement.distance > radius) return;
+
+      const distanceFromOrigin = haversineDistance(
+        item.latitude,
+        item.longitude,
+        origin.latitude,
+        origin.longitude
+      );
+
+      const distanceFromDestination = haversineDistance(
+        item.latitude,
+        item.longitude,
+        destination.latitude,
+        destination.longitude
+      );
+
+      if (
+        distanceFromOrigin < 100 ||
+        distanceFromDestination < 100
+      ) {
+        return;
       }
 
-      const data = await response.json();
+      const normalizedName = normalizeText(item.name);
 
+      if (seenNames.has(normalizedName)) return;
+      seenNames.add(normalizedName);
+
+      candidates.push({
+        ...item,
+        distanceToRoute: measurement.distance,
+        progress: measurement.progress,
+        progressPercent: totalDistance > 0
+          ? measurement.progress / totalDistance
+          : 0
+      });
+    });
+
+    candidates.sort((a, b) => a.progress - b.progress);
+
+    return candidates.slice(
+      0,
+      CONFIG.maximumRouteInterests
+    );
+
+  } catch (error) {
+    if (error.name === "AbortError") {
       if (requestSequence !== interestRequestSequence) {
+        console.info(
+          "Consulta de sitios cancelada porque se solicitó una nueva ruta."
+        );
         return [];
       }
 
-      if (!Array.isArray(data.elements)) {
+      if (timedOut) {
         throw new Error(
-          "La respuesta de Overpass no contiene elementos válidos."
+          `Overpass excedió el tiempo de espera de ${CONFIG.overpassTimeout / 1000} segundos.`
         );
       }
-
-      const cumulative = getRouteMeasurements(coordinates);
-
-      const origin = route.origin;
-      const destination = route.destination;
-      const totalDistance = cumulative[cumulative.length - 1];
-
-      const seenIds = new Set();
-      const seenNames = new Set();
-
-      const candidates = [];
-
-      data.elements.forEach(element => {
-        const item = mapOverpassElement(element);
-        if (!item) return;
-
-        if (seenIds.has(item.id)) return;
-        seenIds.add(item.id);
-
-        const measurement = measurePointAlongRoute(
-          item,
-          coordinates,
-          cumulative
-        );
-
-        if (measurement.distance > radius) return;
-
-        // Evita sugerir el propio origen o destino.
-        const distanceFromOrigin = haversineDistance(
-          item.latitude,
-          item.longitude,
-          origin.latitude,
-          origin.longitude
-        );
-
-        const distanceFromDestination = haversineDistance(
-          item.latitude,
-          item.longitude,
-          destination.latitude,
-          destination.longitude
-        );
-
-        if (
-          distanceFromOrigin < 100 ||
-          distanceFromDestination < 100
-        ) {
-          return;
-        }
-
-        const normalizedName = normalizeText(item.name);
-
-        if (seenNames.has(normalizedName)) return;
-        seenNames.add(normalizedName);
-
-        candidates.push({
-          ...item,
-          distanceToRoute: measurement.distance,
-          progress: measurement.progress,
-          progressPercent: totalDistance > 0
-            ? measurement.progress / totalDistance
-            : 0
-        });
-      });
-
-      candidates.sort((a, b) => a.progress - b.progress);
-
-      return candidates.slice(
-        0,
-        CONFIG.maximumRouteInterests
-      );
-    } finally {
-      clearTimeout(timeoutId);
     }
-  }
 
+    throw error;
+
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
   function renderRouteInterestItem(number, item) {
     const distanceText =
       `A ${formatDistance(item.distanceToRoute)} del trayecto`;
