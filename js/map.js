@@ -3204,24 +3204,25 @@ function connectRouteControls() {
   // INICIO Y API PÚBLICA
   // ------------------------------------------------------------
 
-  function start() {
-    installStyles();
+ function start() {
+  installStyles();
 
-    prepareOriginInput();
-    prepareDestinationInput();
-    prepareExploreInput();
+  prepareOriginInput();
+  prepareDestinationInput();
+  prepareExploreInput();
 
-    prepareCompactRouteLayout();
-    prepareLocationListToggle();
+  prepareCompactRouteLayout();
+  prepareRouteMode();
+  prepareLocationListToggle();
 
-    if (!initializeMap()) return;
+  if (!initializeMap()) return;
 
-    connectFilters();
-    connectRouteControls();
+  connectFilters();
+  connectRouteControls();
 
-    loadLocations();
-  }
-
+  loadLocations();
+}
+  
   window.TripMap = {
     start,
     refresh: loadLocations,
