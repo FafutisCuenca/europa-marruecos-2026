@@ -1,3 +1,4 @@
+
 /*
  * Europa + Marruecos 2026
  * Archivo: js/map.js
@@ -5,22 +6,20 @@
  * Funciones:
  * - Mapa interactivo con Leaflet.
  * - Filtros por ciudad y texto.
- * - Búsqueda abierta de lugares con Photon en "Explorar lugares".
- * - Búsqueda libre de origen y destino con Photon.
+ * - Búsqueda abierta de lugares con Photon.
+ * - Búsqueda libre de origen y destino.
  * - Búsqueda local en locations.json.
- * - Selección de resultados sin alterar rutas existentes.
- * - Coordenadas manuales: latitud, longitud.
  * - Rutas en automóvil y a pie.
- * - Resumen compacto de distancia y duración.
- * - Ubicación GPS actual y seguimiento.
+ * - Resumen de ruta con sitios de interés cercanos.
+ * - Sugerencias ordenadas entre origen y destino.
+ * - Ubicación GPS y seguimiento.
  * - Marcador de exploración independiente.
- * - Marcador GPS y círculo de precisión.
- * - Diagnóstico detallado de errores.
  *
  * Servicios:
  * - Photon: geocodificación.
- * - OpenStreetMap: mapa base.
- * - OSRM público de FOSSGIS: cálculo de rutas.
+ * - OpenStreetMap: mapa y lugares de interés.
+ * - OSRM público: cálculo de rutas.
+ * - Overpass API: búsqueda de sitios cercanos al recorrido.
  * - Geolocation API: ubicación del dispositivo.
  */
 
@@ -41,6 +40,8 @@
     footRouteUrl:
       "https://routing.openstreetmap.de/routed-foot/route/v1/driving",
 
+    overpassUrl: "https://overpass-api.de/api/interpreter",
+
     routeColor: "#d34b35",
 
     searchDelay: 500,
@@ -56,16 +57,27 @@
     gpsTimeout: 20000,
     gpsZoom: 16,
 
-    // Zoom al seleccionar un lugar en "Explorar lugares".
-    exploreZoom: 14
+    exploreZoom: 14,
+
+    // Sitios de interés cercanos a la ruta.
+    // Automóvil: radio más amplio.
+    carInterestRadius: 1200,
+
+    // Caminando: lugares realmente próximos.
+    walkingInterestRadius: 350,
+
+    // Número máximo de puntos de consulta sobre la ruta.
+    interestSamplePoints: 8,
+
+    // Máximo de sitios sugeridos en el resumen.
+    maximumRouteInterests: 12,
+
+    overpassTimeout: 25000
   };
 
   let map = null;
   let markerLayer = null;
   let routeLayer = null;
-
-  // Capa independiente para la búsqueda abierta.
-  // No se elimina al actualizar los marcadores del itinerario.
   let exploreMarker = null;
 
   let allLocations = [];
@@ -78,7 +90,10 @@
   let selectedOrigin = null;
   let selectedDestination = null;
 
-  // Estado de geolocalización.
+  // Controla búsquedas de sitios de interés.
+  let interestRequestSequence = 0;
+
+  // Estado GPS.
   let gpsWatchId = null;
   let gpsMarker = null;
   let gpsAccuracyCircle = null;
@@ -88,7 +103,6 @@
   let gpsTrackingActive = false;
   let gpsHasPosition = false;
 
-  // Tres búsquedas independientes: exploración, origen y destino.
   const searches = {
     explore: {
       timer: null,
@@ -139,12 +153,6 @@
     if (type === "explore") return "mapSearchSuggestionsPanel";
     if (type === "origin") return "routeOriginSuggestionsPanel";
     return "routeDestinationSuggestionsPanel";
-  }
-
-  function getSearchLabel(type) {
-    if (type === "explore") return "lugar";
-    if (type === "origin") return "origen";
-    return "destino";
   }
 
   function hasCoordinates(location) {
@@ -376,6 +384,105 @@
         color: #69746d;
         font-size: 0.76rem;
         line-height: 1.35;
+      }
+
+      /* Itinerario de sitios sugeridos dentro del resumen. */
+      #routeSummary .route-interest-section {
+        margin-top: 12px;
+        padding-top: 10px;
+        border-top: 1px solid #d9dfd6;
+      }
+
+      #routeSummary .route-interest-heading {
+        margin: 0 0 7px;
+        font-size: 0.91rem;
+        font-weight: 700;
+      }
+
+      #routeSummary .route-interest-intro {
+        margin: 0 0 9px;
+        color: #68756f;
+        font-size: 0.78rem;
+      }
+
+      #routeSummary .route-interest-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      #routeSummary .route-interest-item {
+        position: relative;
+        display: grid;
+        grid-template-columns: 25px minmax(0, 1fr);
+        gap: 8px;
+        padding: 7px 0;
+        border-bottom: 1px solid #e4e8e0;
+      }
+
+      #routeSummary .route-interest-item:last-child {
+        border-bottom: 0;
+      }
+
+      #routeSummary .route-interest-number {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 23px;
+        height: 23px;
+        border-radius: 50%;
+        background: #e6ece4;
+        color: #344d3c;
+        font-size: 0.76rem;
+        font-weight: 700;
+      }
+
+      #routeSummary .route-interest-name {
+        display: block;
+        font-weight: 700;
+        color: #26372f;
+      }
+
+      #routeSummary .route-interest-meta {
+        display: block;
+        margin-top: 2px;
+        color: #68756f;
+        font-size: 0.76rem;
+      }
+
+      #routeSummary .route-interest-badge {
+        display: inline-block;
+        margin-left: 5px;
+        padding: 2px 5px;
+        border-radius: 4px;
+        background: #e9eef7;
+        color: #345477;
+        font-size: 0.65rem;
+        font-weight: 700;
+        vertical-align: middle;
+      }
+
+      #routeSummary .route-interest-endpoint {
+        font-weight: 700;
+      }
+
+      #routeSummary .route-interest-endpoint .route-interest-number {
+        background: #e2eadf;
+      }
+
+      #routeSummary .route-interest-status {
+        margin: 7px 0;
+        color: #68756f;
+        font-size: 0.8rem;
+      }
+
+      #routeSummary .route-interest-empty {
+        margin: 7px 0;
+        color: #68756f;
+        font-size: 0.8rem;
       }
 
       #mapLocationList[hidden] {
@@ -685,9 +792,6 @@
     const list = getElement("mapLocationList");
     if (!list) return;
 
-    // El HTML ya tiene su propio controlador para #toggleItinerary.
-    // Aquí solo establecemos el estado inicial, evitando registrar
-    // un segundo evento de clic que interfiera con el controlador HTML.
     const button =
       getElement("toggleItinerary") ||
       getElement("toggleItineraryLocations");
@@ -905,7 +1009,6 @@
     const latLng = L.latLng(latitude, longitude);
 
     createGpsMarker();
-
     gpsMarker.setLatLng(latLng);
 
     if (!map.hasLayer(gpsMarker)) {
@@ -1236,9 +1339,6 @@
     }
 
     if (searchInput) {
-      // El campo cumple dos funciones compatibles:
-      // 1. Filtra los lugares locales.
-      // 2. Ofrece sugerencias de búsqueda geográfica abierta.
       searchInput.addEventListener("input", function () {
         state.search = searchInput.value;
         renderMarkers();
@@ -1350,7 +1450,7 @@
   }
 
   // ------------------------------------------------------------
-  // PANELES DE SUGERENCIAS
+  // PANELES DE SUGERENCIAS DE BÚSQUEDA
   // ------------------------------------------------------------
 
   function ensureSuggestionPanel(type) {
@@ -1476,8 +1576,6 @@
     input.value = chosen.label || getLocationLabel(chosen);
     hideSuggestions(type);
 
-    // La exploración es independiente de las rutas.
-    // No cambia selectedOrigin, selectedDestination ni currentRoute.
     if (type === "explore") {
       showExploreLocation(chosen);
       return;
@@ -1545,7 +1643,6 @@
       return null;
     }
 
-    // GeoJSON utiliza [longitud, latitud].
     const longitude = Number(coordinates[0]);
     const latitude = Number(coordinates[1]);
 
@@ -1784,9 +1881,6 @@
         selectedDestination = null;
       }
 
-      // Escribir en los campos de ruta conserva el comportamiento anterior:
-      // invalida la selección correspondiente y elimina la ruta anterior.
-      // Escribir en "Explorar lugares" no modifica las rutas.
       if (type !== "explore" && currentRoute) {
         clearRoute({ showStatus: false });
       }
@@ -2066,7 +2160,7 @@
   }
 
   // ------------------------------------------------------------
-  // FORMATO Y RESUMEN DE RUTA
+  // FORMATO DE DISTANCIA Y TIEMPO
   // ------------------------------------------------------------
 
   function formatDistance(meters) {
@@ -2091,11 +2185,544 @@
     return `${hours} h ${minutes} min`;
   }
 
+  // ------------------------------------------------------------
+  // SITIOS DE INTERÉS CERCANOS A LA RUTA
+  // ------------------------------------------------------------
+
+  function haversineDistance(lat1, lon1, lat2, lon2) {
+    const earthRadius = 6371000;
+    const toRadians = value => value * Math.PI / 180;
+
+    const dLat = toRadians(lat2 - lat1);
+    const dLon = toRadians(lon2 - lon1);
+
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRadians(lat1)) *
+      Math.cos(toRadians(lat2)) *
+      Math.sin(dLon / 2) ** 2;
+
+    return earthRadius * 2 * Math.atan2(
+      Math.sqrt(a),
+      Math.sqrt(1 - a)
+    );
+  }
+
+  function getRouteMeasurements(coordinates) {
+    const cumulative = [0];
+
+    for (let i = 1; i < coordinates.length; i++) {
+      const previous = coordinates[i - 1];
+      const current = coordinates[i];
+
+      const segmentDistance = haversineDistance(
+        previous[1],
+        previous[0],
+        current[1],
+        current[0]
+      );
+
+      cumulative.push(cumulative[i - 1] + segmentDistance);
+    }
+
+    return cumulative;
+  }
+
+  /*
+   * Calcula la distancia aproximada de un punto a la línea
+   * y su posición longitudinal dentro del recorrido.
+   *
+   * Las coordenadas de GeoJSON están en formato [longitud, latitud].
+   */
+  function measurePointAlongRoute(point, coordinates, cumulative) {
+    const pointLat = Number(point.latitude);
+    const pointLon = Number(point.longitude);
+
+    let minimumDistance = Infinity;
+    let progress = 0;
+
+    for (let i = 0; i < coordinates.length - 1; i++) {
+      const a = coordinates[i];
+      const b = coordinates[i + 1];
+
+      const meanLat = (pointLat + a[1] + b[1]) / 3;
+      const metersPerDegreeLon =
+        111320 * Math.cos(meanLat * Math.PI / 180);
+      const metersPerDegreeLat = 111320;
+
+      const ax = (a[0] - pointLon) * metersPerDegreeLon;
+      const ay = (a[1] - pointLat) * metersPerDegreeLat;
+      const bx = (b[0] - pointLon) * metersPerDegreeLon;
+      const by = (b[1] - pointLat) * metersPerDegreeLat;
+
+      const dx = bx - ax;
+      const dy = by - ay;
+      const lengthSquared = dx * dx + dy * dy;
+
+      let t = 0;
+
+      if (lengthSquared > 0) {
+        t = -(ax * dx + ay * dy) / lengthSquared;
+        t = Math.max(0, Math.min(1, t));
+      }
+
+      const closestX = ax + t * dx;
+      const closestY = ay + t * dy;
+
+      const distance = Math.sqrt(
+        closestX * closestX + closestY * closestY
+      );
+
+      if (distance < minimumDistance) {
+        minimumDistance = distance;
+
+        const segmentLength =
+          cumulative[i + 1] - cumulative[i];
+
+        progress =
+          cumulative[i] + segmentLength * t;
+      }
+    }
+
+    return {
+      distance: minimumDistance,
+      progress
+    };
+  }
+
+  function sampleRouteCoordinates(coordinates, maximumPoints) {
+    if (!Array.isArray(coordinates) || !coordinates.length) {
+      return [];
+    }
+
+    if (coordinates.length <= maximumPoints) {
+      return coordinates;
+    }
+
+    const samples = [];
+    const lastIndex = coordinates.length - 1;
+
+    for (let i = 0; i < maximumPoints; i++) {
+      const index = Math.round(
+        i * lastIndex / (maximumPoints - 1)
+      );
+
+      samples.push(coordinates[index]);
+    }
+
+    return samples;
+  }
+
+  function getInterestRadius(mode) {
+    return mode === "walking"
+      ? CONFIG.walkingInterestRadius
+      : CONFIG.carInterestRadius;
+  }
+
+  function buildOverpassQuery(samples, radius, mode) {
+    const clauses = [];
+
+    samples.forEach(coordinate => {
+      const longitude = Number(coordinate[0]).toFixed(6);
+      const latitude = Number(coordinate[1]).toFixed(6);
+
+      const around = `(around:${radius},${latitude},${longitude})`;
+
+      clauses.push(
+        `nwr${around}["tourism"~"attraction|museum|gallery|artwork|viewpoint|zoo|aquarium|theme_park"];`
+      );
+
+      clauses.push(
+        `nwr${around}["historic"];`
+      );
+
+      clauses.push(
+        `nwr${around}["leisure"~"park|garden"];`
+      );
+
+      clauses.push(
+        `nwr${around}["amenity"~"theatre|arts_centre|place_of_worship"];`
+      );
+
+      clauses.push(
+        `nwr${around}["natural"~"beach|cave|peak"];`
+      );
+
+      if (mode === "driving") {
+        clauses.push(
+          `nwr${around}["tourism"~"viewpoint|information"];`
+        );
+      }
+    });
+
+    return `
+      [out:json][timeout:20];
+      (
+        ${clauses.join("\n")}
+      );
+      out center tags;
+    `;
+  }
+
+  function getOverpassElementCoordinates(element) {
+    if (
+      Number.isFinite(Number(element.lat)) &&
+      Number.isFinite(Number(element.lon))
+    ) {
+      return {
+        latitude: Number(element.lat),
+        longitude: Number(element.lon)
+      };
+    }
+
+    if (
+      element.center &&
+      Number.isFinite(Number(element.center.lat)) &&
+      Number.isFinite(Number(element.center.lon))
+    ) {
+      return {
+        latitude: Number(element.center.lat),
+        longitude: Number(element.center.lon)
+      };
+    }
+
+    return null;
+  }
+
+  function getInterestCategory(tags) {
+    if (tags.tourism) {
+      const tourismLabels = {
+        attraction: "Atracción turística",
+        museum: "Museo",
+        gallery: "Galería",
+        artwork: "Obra de arte",
+        viewpoint: "Mirador",
+        zoo: "Zoológico",
+        aquarium: "Acuario",
+        theme_park: "Parque temático",
+        information: "Punto de información"
+      };
+
+      return tourismLabels[tags.tourism] || "Lugar de interés";
+    }
+
+    if (tags.historic) {
+      return "Lugar histórico";
+    }
+
+    if (tags.leisure === "park") return "Parque";
+    if (tags.leisure === "garden") return "Jardín";
+
+    if (tags.amenity === "theatre") return "Teatro";
+    if (tags.amenity === "arts_centre") return "Centro cultural";
+    if (tags.amenity === "place_of_worship") return "Edificio religioso";
+
+    if (tags.natural === "beach") return "Playa";
+    if (tags.natural === "cave") return "Cueva";
+    if (tags.natural === "peak") return "Cumbre o montaña";
+
+    return "Lugar de interés";
+  }
+
+  function mapOverpassElement(element) {
+    const tags = element.tags || {};
+    const coordinates = getOverpassElementCoordinates(element);
+
+    if (!coordinates) return null;
+
+    const name =
+      tags.name ||
+      tags["name:es"] ||
+      tags["name:en"];
+
+    // Evita mostrar elementos sin nombre.
+    if (!name) return null;
+
+    return {
+      id: `${element.type}/${element.id}`,
+      name,
+      latitude: coordinates.latitude,
+      longitude: coordinates.longitude,
+      category: getInterestCategory(tags),
+      city:
+        tags["addr:city"] ||
+        tags["addr:town"] ||
+        tags["addr:place"] ||
+        "",
+      country: tags["addr:country"] || "",
+      source: "overpass"
+    };
+  }
+
+  async function fetchRouteInterests(route, requestSequence) {
+    const geometry = route?.geometry;
+    const coordinates = geometry?.coordinates;
+
+    if (
+      !Array.isArray(coordinates) ||
+      coordinates.length < 2
+    ) {
+      return [];
+    }
+
+    const radius = getInterestRadius(route.mode);
+
+    const samples = sampleRouteCoordinates(
+      coordinates,
+      CONFIG.interestSamplePoints
+    );
+
+    const query = buildOverpassQuery(
+      samples,
+      radius,
+      route.mode
+    );
+
+    const controller = new AbortController();
+
+    const timeoutId = setTimeout(
+      () => controller.abort(),
+      CONFIG.overpassTimeout
+    );
+
+    try {
+      const response = await fetch(CONFIG.overpassUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+          "Accept": "application/json"
+        },
+        body: new URLSearchParams({ data: query }),
+        signal: controller.signal
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Overpass respondió con error HTTP ${response.status}.`
+        );
+      }
+
+      const data = await response.json();
+
+      if (requestSequence !== interestRequestSequence) {
+        return [];
+      }
+
+      if (!Array.isArray(data.elements)) {
+        throw new Error(
+          "La respuesta de Overpass no contiene elementos válidos."
+        );
+      }
+
+      const cumulative = getRouteMeasurements(coordinates);
+
+      const origin = route.origin;
+      const destination = route.destination;
+      const totalDistance = cumulative[cumulative.length - 1];
+
+      const seenIds = new Set();
+      const seenNames = new Set();
+
+      const candidates = [];
+
+      data.elements.forEach(element => {
+        const item = mapOverpassElement(element);
+        if (!item) return;
+
+        if (seenIds.has(item.id)) return;
+        seenIds.add(item.id);
+
+        const measurement = measurePointAlongRoute(
+          item,
+          coordinates,
+          cumulative
+        );
+
+        if (measurement.distance > radius) return;
+
+        // Evita sugerir el propio origen o destino.
+        const distanceFromOrigin = haversineDistance(
+          item.latitude,
+          item.longitude,
+          origin.latitude,
+          origin.longitude
+        );
+
+        const distanceFromDestination = haversineDistance(
+          item.latitude,
+          item.longitude,
+          destination.latitude,
+          destination.longitude
+        );
+
+        if (
+          distanceFromOrigin < 100 ||
+          distanceFromDestination < 100
+        ) {
+          return;
+        }
+
+        const normalizedName = normalizeText(item.name);
+
+        if (seenNames.has(normalizedName)) return;
+        seenNames.add(normalizedName);
+
+        candidates.push({
+          ...item,
+          distanceToRoute: measurement.distance,
+          progress: measurement.progress,
+          progressPercent: totalDistance > 0
+            ? measurement.progress / totalDistance
+            : 0
+        });
+      });
+
+      candidates.sort((a, b) => a.progress - b.progress);
+
+      return candidates.slice(
+        0,
+        CONFIG.maximumRouteInterests
+      );
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  function renderRouteInterestItem(number, item) {
+    const distanceText =
+      `A ${formatDistance(item.distanceToRoute)} del trayecto`;
+
+    return `
+      <li class="route-interest-item">
+        <span class="route-interest-number">${number}</span>
+        <span>
+          <span class="route-interest-name">
+            ${escapeHtml(item.name)}
+            <span class="route-interest-badge">SUGERIDO</span>
+          </span>
+          <span class="route-interest-meta">
+            ${escapeHtml(item.category)} · ${escapeHtml(distanceText)}
+          </span>
+        </span>
+      </li>
+    `;
+  }
+
+  function renderRouteInterests(items, requestSequence) {
+    if (requestSequence !== interestRequestSequence) return;
+
+    const container = getElement("routeInterestList");
+    if (!container) return;
+
+    if (!items.length) {
+      container.innerHTML = `
+        <p class="route-interest-empty">
+          No encontramos sitios de interés con nombre dentro del área
+          de búsqueda de este recorrido.
+        </p>
+      `;
+      return;
+    }
+
+    const origin = currentRoute?.origin;
+    const destination = currentRoute?.destination;
+
+    if (!origin || !destination) return;
+
+    const listItems = [];
+
+    listItems.push(`
+      <li class="route-interest-item route-interest-endpoint">
+        <span class="route-interest-number">A</span>
+        <span>
+          <span class="route-interest-name">Origen</span>
+          <span class="route-interest-meta">
+            ${escapeHtml(getOriginLabel(origin))}
+          </span>
+        </span>
+      </li>
+    `);
+
+    items.forEach((item, index) => {
+      listItems.push(
+        renderRouteInterestItem(index + 1, item)
+      );
+    });
+
+    listItems.push(`
+      <li class="route-interest-item route-interest-endpoint">
+        <span class="route-interest-number">D</span>
+        <span>
+          <span class="route-interest-name">Destino</span>
+          <span class="route-interest-meta">
+            ${escapeHtml(getDestinationLabel(destination))}
+          </span>
+        </span>
+      </li>
+    `);
+
+    container.innerHTML = `
+      <ol class="route-interest-list">
+        ${listItems.join("")}
+      </ol>
+    `;
+  }
+
+  async function generateRouteSuggestions(route) {
+    const requestSequence = ++interestRequestSequence;
+    const container = getElement("routeInterestList");
+
+    if (!container) return;
+
+    const radius = getInterestRadius(route.mode);
+
+    container.innerHTML = `
+      <p class="route-interest-status">
+        Buscando sitios de interés a ${formatDistance(radius)}
+        del recorrido…
+      </p>
+    `;
+
+    try {
+      const items = await fetchRouteInterests(
+        route,
+        requestSequence
+      );
+
+      if (requestSequence !== interestRequestSequence) return;
+
+      renderRouteInterests(items, requestSequence);
+    } catch (error) {
+      if (requestSequence !== interestRequestSequence) return;
+
+      console.warn(
+        "No fue posible obtener sitios de interés:",
+        error
+      );
+
+      container.innerHTML = `
+        <p class="route-interest-empty">
+          No fue posible consultar los sitios de interés en este momento.
+          La ruta calculada sigue disponible. Puedes intentarlo nuevamente
+          calculando la ruta otra vez.
+        </p>
+      `;
+    }
+  }
+
+  // ------------------------------------------------------------
+  // RESUMEN DE RUTA
+  // ------------------------------------------------------------
+
   function renderRouteSummary(origin, destination, route, mode) {
     const summary = getElement("routeSummary");
     if (!summary) return;
 
-    const modeLabel = mode === "walking" ? "A pie" : "Automóvil";
+    const modeLabel = mode === "walking"
+      ? "A pie"
+      : "Automóvil";
+
+    const radius = getInterestRadius(mode);
 
     summary.innerHTML = `
       <p class="route-summary-title">Resumen de la ruta</p>
@@ -2127,8 +2754,28 @@
         ${escapeHtml(getDestinationLabel(destination))}
       </p>
 
+      <section class="route-interest-section">
+        <p class="route-interest-heading">
+          Sitios de interés cerca del trayecto
+        </p>
+
+        <p class="route-interest-intro">
+          Lugares sugeridos en un radio aproximado de
+          ${escapeHtml(formatDistance(radius))} de la ruta.
+          Se muestran en orden de recorrido.
+        </p>
+
+        <div id="routeInterestList" aria-live="polite">
+          <p class="route-interest-status">
+            Preparando búsqueda de sitios de interés…
+          </p>
+        </div>
+      </section>
+
       <p class="route-summary-warning">
-        Duración estimada según el servicio de rutas; no incluye tráfico en tiempo real.
+        Duración estimada según el servicio de rutas; no incluye tráfico
+        en tiempo real. La distancia a los sitios sugeridos es aproximada:
+        no representa un desvío calculado.
       </p>
     `;
 
@@ -2136,6 +2783,9 @@
   }
 
   function clearRoute(options = {}) {
+    // Invalida cualquier búsqueda de lugares que siga en curso.
+    interestRequestSequence += 1;
+
     if (routeLayer) routeLayer.clearLayers();
 
     currentRoute = null;
@@ -2231,7 +2881,6 @@
         ? CONFIG.footRouteUrl
         : CONFIG.carRouteUrl;
 
-      // OSRM utiliza longitud,latitud.
       const coordinates = [
         `${origin.longitude},${origin.latitude}`,
         `${destination.longitude},${destination.latitude}`
@@ -2338,7 +2987,16 @@
         geometry: route.geometry
       };
 
-      renderRouteSummary(origin, destination, route, mode);
+      renderRouteSummary(
+        currentRoute.origin,
+        currentRoute.destination,
+        route,
+        mode
+      );
+
+      // La consulta de sitios de interés es independiente del trazado.
+      // Si falla, no se elimina ni invalida la ruta calculada.
+      generateRouteSuggestions(currentRoute);
 
       showRouteStatus("Ruta calculada correctamente.");
     } catch (error) {
@@ -2384,8 +3042,6 @@
 
     connectSearch("origin");
     connectSearch("destination");
-
-    // Nueva búsqueda abierta, independiente de las rutas.
     connectSearch("explore");
   }
 
@@ -2495,7 +3151,6 @@
     calculateRoute,
     clearRoute,
 
-    // Funciones GPS disponibles para pruebas desde la consola.
     startLocationTracking,
     stopLocationTracking,
 
