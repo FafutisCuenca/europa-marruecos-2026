@@ -2812,27 +2812,82 @@
   }
 
   function clearRoute(options = {}) {
-    // Invalida cualquier búsqueda de lugares que siga en curso.
-    interestRequestSequence += 1;
+  // Invalida búsquedas de sitios de interés pendientes.
+  interestRequestSequence += 1;
 
-    if (routeLayer) routeLayer.clearLayers();
+  // Invalida cualquier cálculo de ruta anterior.
+  if (options.fullReset) {
+    routeRequestSequence += 1;
+    routeRequestInProgress = false;
+  }
 
-    currentRoute = null;
+  // Elimina la línea y los marcadores de la ruta.
+  if (routeLayer) {
+    routeLayer.clearLayers();
+  }
 
-    const summary = getElement("routeSummary");
+  currentRoute = null;
 
-    if (summary) {
-      summary.innerHTML = "";
-      summary.hidden = true;
+  // Elimina el resumen y los sitios sugeridos.
+  const summary = getElement("routeSummary");
+
+  if (summary) {
+    summary.innerHTML = "";
+    summary.hidden = true;
+  }
+
+  if (options.fullReset) {
+    // Limpia las selecciones almacenadas.
+    selectedOrigin = null;
+    selectedDestination = null;
+
+    // Limpia los campos.
+    const originInput = getElement("routeOrigin");
+    const destinationInput = getElement("routeDestination");
+
+    if (originInput) {
+      originInput.value = "";
     }
 
-    if (options.showStatus !== false) {
-      showRouteStatus(
-        "Ruta eliminada. Puedes seleccionar otros puntos y calcular una nueva."
+    if (destinationInput) {
+      destinationInput.value = "";
+    }
+
+    // Cancela las búsquedas pendientes de los campos.
+    ["origin", "destination"].forEach(type => {
+      cancelSearch(type);
+      hideSuggestions(type);
+    });
+
+    // Restablece la modalidad a pie.
+    const modeSelect = getElement("routeMode");
+
+    if (modeSelect) {
+      const walkingOption = Array.from(modeSelect.options).find(
+        option => option.value === "walking"
       );
+
+      if (walkingOption) {
+        modeSelect.value = "walking";
+      }
+    }
+
+    // Habilita nuevamente el botón de cálculo.
+    const calculateButton = getElement("calculateRoute");
+
+    if (calculateButton) {
+      calculateButton.disabled = false;
     }
   }
 
+  if (options.showStatus !== false) {
+    showRouteStatus(
+      options.fullReset
+        ? "Ruta limpiada. Selecciona un nuevo origen y destino."
+        : "Ruta eliminada. Puedes seleccionar otros puntos y calcular una nueva."
+    );
+  }
+}
   // ------------------------------------------------------------
   // CÁLCULO DE RUTA
   // ------------------------------------------------------------
