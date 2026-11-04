@@ -784,6 +784,35 @@
     summary.hidden = true;
   }
 
+  function prepareRouteMode() {
+  const modeSelect = getElement("routeMode");
+  if (!modeSelect) return;
+
+  // A pie será siempre la modalidad predeterminada.
+  const walkingOption = Array.from(modeSelect.options).find(option =>
+    option.value === "walking"
+  );
+
+  if (walkingOption) {
+    modeSelect.value = "walking";
+  }
+
+  // Cambiar el encabezado del campo.
+  const field =
+    modeSelect.closest(".field") ||
+    modeSelect.parentElement;
+
+  if (!field) return;
+
+  const label =
+    field.querySelector('label[for="routeMode"]') ||
+    field.querySelector("label");
+
+  if (label && !label.contains(modeSelect)) {
+    label.textContent = "Cómo deseas recorrer la ruta";
+  }
+}
+  
   // ------------------------------------------------------------
   // LISTA DEL ITINERARIO
   // ------------------------------------------------------------
