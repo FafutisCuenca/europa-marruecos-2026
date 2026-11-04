@@ -3103,32 +3103,27 @@
     }
   }
 
-  function connectRouteControls() {
-    const calculateButton = getElement("calculateRoute");
-    const clearButton = getElement("clearRoute");
+function connectRouteControls() {
+  const calculateButton = getElement("calculateRoute");
+  const clearButton = getElement("clearRoute");
 
-    if (calculateButton) {
-      calculateButton.addEventListener("click", calculateRoute);
-    }
-
-    if (clearButton) {
-      clearButton.addEventListener("click", function () {
-        ++routeRequestSequence;
-        routeRequestInProgress = false;
-
-        if (calculateButton) {
-          calculateButton.disabled = false;
-        }
-
-        clearRoute();
-      });
-    }
-
-    connectSearch("origin");
-    connectSearch("destination");
-    connectSearch("explore");
+  if (calculateButton) {
+    calculateButton.addEventListener("click", calculateRoute);
   }
 
+  if (clearButton) {
+    clearButton.addEventListener("click", function () {
+      clearRoute({
+        fullReset: true
+      });
+    });
+  }
+
+  connectSearch("origin");
+  connectSearch("destination");
+  connectSearch("explore");
+}
+  
   // ------------------------------------------------------------
   // CARGA DE LOCATIONS.JSON
   // ------------------------------------------------------------
