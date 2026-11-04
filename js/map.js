@@ -2714,48 +2714,50 @@
     `;
   }
 
-  async function generateRouteSuggestions(route) {
-    const requestSequence = ++interestRequestSequence;
-    const container = getElement("routeInterestList");
+ async function generateRouteSuggestions(route) {
+  const requestSequence = ++interestRequestSequence;
+  const container = getElement("routeInterestList");
 
-    if (!container) return;
+  if (!container) return;
 
-    const radius = getInterestRadius(route.mode);
+  const radius = getInterestRadius(route.mode);
+
+  container.innerHTML = `
+    <p class="route-interest-status">
+      Buscando sitios de interés a ${formatDistance(radius)}
+      del recorrido…
+    </p>
+  `;
+
+  try {
+    const items = await fetchRouteInterests(
+      route,
+      requestSequence
+    );
+
+    if (requestSequence !== interestRequestSequence) return;
+
+    renderRouteInterests(items, requestSequence);
+
+  } catch (error) {
+    if (requestSequence !== interestRequestSequence) return;
+
+    console.warn(
+      "No fue posible obtener sitios de interés:",
+      error
+    );
 
     container.innerHTML = `
-      <p class="route-interest-status">
-        Buscando sitios de interés a ${formatDistance(radius)}
-        del recorrido…
+      <p class="route-interest-empty">
+        ${error.message && error.message.includes("tiempo de espera")
+          ? "La consulta de sitios de interés excedió el tiempo de espera."
+          : "No fue posible consultar los sitios de interés en este momento."}
+        La ruta calculada sigue disponible.
       </p>
     `;
-
-    try {
-      const items = await fetchRouteInterests(
-        route,
-        requestSequence
-      );
-
-      if (requestSequence !== interestRequestSequence) return;
-
-      renderRouteInterests(items, requestSequence);
-    } catch (error) {
-      if (requestSequence !== interestRequestSequence) return;
-
-      console.warn(
-        "No fue posible obtener sitios de interés:",
-        error
-      );
-
-      container.innerHTML = `
-        <p class="route-interest-empty">
-          No fue posible consultar los sitios de interés en este momento.
-          La ruta calculada sigue disponible. Puedes intentarlo nuevamente
-          calculando la ruta otra vez.
-        </p>
-      `;
-    }
   }
-
+}
+  
   // ------------------------------------------------------------
   // RESUMEN DE RUTA
   // ------------------------------------------------------------
